@@ -1,32 +1,22 @@
-/**
- * Blink
- *
- * Turns on an LED on for one second,
- * then off for one second, repeatedly.
- */
 #include "Arduino.h"
 
-#ifndef LED_BUILTIN
-#define LED_BUILTIN 13
-#endif
+#define LED_BUILTIN 2
 
-void setup()
-{
-  // initialize LED digital pin as an output.
+void setup() {
+  // Initialize Serial communication
+  Serial.begin(115200);
+  Serial.println("ESP32 Blink Test");
+  
+  // Initialize LED digital pin as an output
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
-void loop()
-{
-  // turn the LED on (HIGH is the voltage level)
+void loop() {
+  Serial.println("LED ON");
   digitalWrite(LED_BUILTIN, HIGH);
-
-  // wait for a second
   delay(1000);
-
-  // turn the LED off by making the voltage LOW
+  
+  Serial.println("LED OFF");
   digitalWrite(LED_BUILTIN, LOW);
-
-   // wait for a second
   delay(1000);
 }
