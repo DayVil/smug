@@ -1,4 +1,4 @@
-package com.github.smugapp.network
+package com.github.smugapp.network.bluetooth
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val TAG = "BluetoothDiscoveryHandler"
 
-class BluetoothDiscoveryReceiver(
+class BluetoothDiscoveryCallback(
     private val discoveredDevices: MutableStateFlow<Set<BluetoothDevice>>,
     private val stopDiscovery: () -> Unit
 ) : BroadcastReceiver() {

@@ -11,3 +11,5 @@ upload:
 clean:
 	pio run -e $(ENV) -t clean
 
+monitor:
+	pio device monitor
