@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresPermission
 import com.github.smugapp.network.ble.BluetoothLEConnectionHandler
 import com.github.smugapp.network.ble.BluetoothLEDiscoveryHandler
+import com.github.smugapp.ui.screens.MainContent
 
 //private const val TAG = "MainActivity"
 
