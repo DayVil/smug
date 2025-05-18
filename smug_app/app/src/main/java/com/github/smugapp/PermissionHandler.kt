@@ -30,7 +30,7 @@ private fun requestPermissionLauncher(context: ComponentActivity): ActivityResul
     }
 }
 
-fun fetchPermissions(): Array<String> {
+fun fetchBLEPermissions(): Array<String> {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
             Manifest.permission.BLUETOOTH_SCAN,
@@ -48,9 +48,13 @@ fun fetchPermissions(): Array<String> {
     }
 }
 
+fun fetchCamaraPermissions(): Array<String> {
+    return arrayOf(Manifest.permission.CAMERA)
+}
+
 fun checkAndRequestPermissions(context: ComponentActivity) {
     Log.d(TAG, "Checking and requesting permissions")
-    val permissions = fetchPermissions()
+    val permissions = fetchBLEPermissions() + fetchCamaraPermissions()
 
     val permissionsToRequest = permissions.filter {
         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED

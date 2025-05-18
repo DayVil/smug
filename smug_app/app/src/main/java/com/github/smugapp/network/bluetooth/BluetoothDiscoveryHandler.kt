@@ -10,7 +10,7 @@ import android.content.IntentFilter
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.github.smugapp.checkPermissions
-import com.github.smugapp.fetchPermissions
+import com.github.smugapp.fetchBLEPermissions
 import com.github.smugapp.isLocationEnabled
 import com.github.smugapp.network.NetworkDiscovery
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,7 +74,7 @@ class BluetoothDiscoveryHandler(private val context: Context) : NetworkDiscovery
     override fun startScan(): Boolean {
         Log.d(TAG, "Starting Bluetooth discovery")
 
-        if (!checkPermissions(fetchPermissions(), context)) {
+        if (!checkPermissions(fetchBLEPermissions(), context)) {
             Log.e(
                 TAG,
                 "Cannot start discovery: Missing required permissions"
@@ -132,7 +132,7 @@ class BluetoothDiscoveryHandler(private val context: Context) : NetworkDiscovery
             )
             Log.d(
                 TAG,
-                "- Permissions granted: ${checkPermissions(fetchPermissions(), context)}"
+                "- Permissions granted: ${checkPermissions(fetchBLEPermissions(), context)}"
             )
             Log.d(
                 TAG,

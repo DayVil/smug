@@ -13,7 +13,7 @@ import android.os.Looper
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.github.smugapp.checkPermissions
-import com.github.smugapp.fetchPermissions
+import com.github.smugapp.fetchBLEPermissions
 import com.github.smugapp.isLocationEnabled
 import com.github.smugapp.network.NetworkDiscovery
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,7 +64,7 @@ class BluetoothLEDiscoveryHandler(private val context: Context) : NetworkDiscove
     override fun startScan(): Boolean {
         Log.d(TAG, "Starting BLE scan")
 
-        if (!checkPermissions(fetchPermissions(), context)) {
+        if (!checkPermissions(fetchBLEPermissions(), context)) {
             Log.e(TAG, "Cannot start scan: Missing required permissions")
             return false
         }

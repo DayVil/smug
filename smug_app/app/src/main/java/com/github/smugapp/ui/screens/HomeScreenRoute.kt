@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,16 +38,15 @@ private val SERVICE_UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b
 private val CHARACTERISTIC_UUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8")
 
 @Serializable
-object HomeScreen
+object HomeScreenRoute
 
 @SuppressLint("MissingPermission")
 @Composable
 fun HomeScreenContent(
-    weight: Int,
     bluetoothLEDiscoveryHandler: BluetoothLEDiscoveryHandler,
     bluetoothLEConnectionHandler: BluetoothLEConnectionHandler
 ) {
-    var weightState by remember { mutableIntStateOf(weight) }
+    var weightState by remember { mutableIntStateOf(0) }
     val bleDevices by bluetoothLEDiscoveryHandler
         .discoveredDevices
         .collectAsState()
@@ -105,48 +103,47 @@ fun HomeScreenContent(
         }
     }
 
-    Scaffold { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentAlignment = Alignment.TopCenter
+    Box(
+        modifier = Modifier
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(start = 20.dp, top = 16.dp, end = 20.dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(text = "Weight: $weightState")
-                Text(text = "Connection State: $connectionState")
+            Text(text = "Weight: $weightState")
+            Text(text = "Connection State: $connectionState")
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                Row {
-                    Button(
-                        onClick = { bluetoothLEDiscoveryHandler.startScan() },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) { Text("Start BLE Scan") }
+            Row {
+                Button(
+                    onClick = { bluetoothLEDiscoveryHandler.startScan() },
+                    modifier = Modifier.padding(end = 8.dp)
+                ) { Text("Start BLE Scan") }
 
-                    Button(
-                        onClick = { bluetoothLEDiscoveryHandler.stopScan() },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) { Text("Stop BLE Scan") }
-                }
+                Button(
+                    onClick = { bluetoothLEDiscoveryHandler.stopScan() },
+                    modifier = Modifier.padding(end = 8.dp)
+                ) { Text("Stop BLE Scan") }
+            }
 
-                LazyColumn {
-                    items(
-                        bleDevices
-                            .toList()
-                            .filter {
-                                it.name != null && it.type == BluetoothDevice.DEVICE_TYPE_LE
-                            }) { device ->
-                        DeviceCard(
-                            device = device,
-                            selectedDevice = selectedDevice,
-                        ) {
-                            selectedDevice = device
-                            bluetoothLEConnectionHandler.connect(device)
+            LazyColumn {
+                items(
+                    bleDevices
+                        .toList()
+                        .filter {
+                            it.name != null && it.type == BluetoothDevice.DEVICE_TYPE_LE
                         }
+                )
+                { device ->
+                    DeviceCard(
+                        device = device,
+                        selectedDevice = selectedDevice,
+                    ) {
+                        selectedDevice = device
+                        bluetoothLEConnectionHandler.connect(device)
                     }
                 }
             }
