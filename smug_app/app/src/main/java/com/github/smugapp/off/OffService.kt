@@ -13,6 +13,7 @@ import io.ktor.http.appendPathSegments
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import java.nio.channels.UnresolvedAddressException
 
 const val TAG = "OffService"
 
@@ -54,6 +55,10 @@ class OffService {
 
             return Result.success(offResponse.product)
         } catch (e: Exception) {
+            if (e is UnresolvedAddressException) {
+                return Result.failure(Exception("No internet connection"))
+            }
+
             return Result.failure(e)
         }
     }
