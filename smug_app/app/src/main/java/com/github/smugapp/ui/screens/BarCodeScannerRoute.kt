@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,13 +25,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.github.smugapp.off.DrinkProduct
 import com.github.smugapp.off.OffService
+import com.github.smugapp.ui.components.CameraPreview
 import com.github.smugapp.ui.components.OffCard
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -49,6 +54,7 @@ sealed interface UiState {
 fun BarCodeScannerContent() {
     var uiState by remember { mutableStateOf<UiState>(UiState.Init) }
     var productId by remember { mutableStateOf("") }
+    var isScanning by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val client = remember { OffService() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -60,91 +66,157 @@ fun BarCodeScannerContent() {
         }
     }
 
-    val searchAction = {
-        if (productId.isNotBlank()) {
-            Log.d(TAG, "Running request for ID: $productId")
-            uiState = UiState.Loading
-            scope.launch {
-                val product = client.fetchProduct(productId)
-                uiState = product.fold(
-                    onSuccess = {
-                        Log.d(TAG, "Success: $it")
-                        UiState.Success(it)
-                    },
-                    onFailure = {
-                        Log.d(TAG, "Failure: $it")
-                        UiState.Error(it)
-                    }
-                )
-            }
-            keyboardController?.hide()
+    fun searchAction() {
+        if (productId.isBlank()) {
+            return
         }
+
+        Log.d(TAG, "Running request for ID: $productId")
+        uiState = UiState.Loading
+        scope.launch {
+            val product = client.fetchProduct(productId)
+            uiState = product.fold(
+                onSuccess = {
+                    Log.d(TAG, "Success: $it")
+                    UiState.Success(it)
+                },
+                onFailure = {
+                    Log.d(TAG, "Failure: $it")
+                    UiState.Error(it)
+                }
+            )
+        }
+        keyboardController?.hide()
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .padding(start = 20.dp, top = 16.dp, end = 20.dp)
-                .fillMaxWidth()
+    if (isScanning) {
+        ScanRunning(
+            onBarcodeDetected = { barcode ->
+                Log.d(TAG, "Barcode detected: $barcode")
+                productId = barcode
+                isScanning = false
+                scope.launch {
+                    delay(100)
+                    searchAction()
+                }
+            },
+            setScanning = { isScanning = false }
+        )
+    } else {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
-            OutlinedTextField(
-                value = productId,
-                onValueChange = { productId = it },
-                label = { Text("Product ID") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Search
-                ),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        searchAction()
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .padding(start = 20.dp, top = 16.dp, end = 20.dp)
+                    .fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = productId,
+                    onValueChange = { productId = it },
+                    label = { Text("Product ID") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Search
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            searchAction()
+                        }
+                    ),
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { searchAction() },
+                            enabled = productId.isNotBlank() && uiState !is UiState.Loading
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = "Search"
+                            )
+                        }
+                    },
+                    leadingIcon = {
+                        IconButton(
+                            onClick = {
+                                isScanning = true
+                            },
+                            enabled = uiState !is UiState.Loading
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.CameraAlt,
+                                contentDescription = "Scan barcode"
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = uiState !is UiState.Loading
+                )
+
+
+                when (val state = uiState) {
+                    is UiState.Loading -> {
+                        Text(text = "Loading...", modifier = Modifier.padding(top = 16.dp))
                     }
-                ),
-                trailingIcon = {
-                    IconButton(
-                        onClick = { searchAction() },
-                        enabled = productId.isNotBlank() && uiState !is UiState.Loading
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Search"
+
+                    is UiState.Success -> {
+                        OffCard(state.data)
+                    }
+
+                    is UiState.Error -> {
+                        Text(
+                            text = "Error: ${state.exception}",
+                            modifier = Modifier.padding(top = 16.dp)
+                        )
+                        Log.d(TAG, "Error: ${state.exception}")
+                    }
+
+                    UiState.Init -> {
+                        Text(
+                            text = "Enter a product ID to search or tap camera to scan",
+                            modifier = Modifier.padding(top = 16.dp)
                         )
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = uiState !is UiState.Loading
-            )
-
-
-            when (val state = uiState) {
-                is UiState.Loading -> {
-                    Text(text = "Loading...", modifier = Modifier.padding(top = 16.dp))
-                }
-
-                is UiState.Success -> {
-                    OffCard(state.data)
-                }
-
-                is UiState.Error -> {
-                    Text(
-                        text = "Error: ${state.exception}",
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
-                    Log.d(TAG, "Error: ${state.exception}")
-                }
-
-                UiState.Init -> {
-                    Text(
-                        text = "Enter a product ID to search",
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ScanRunning(
+    onBarcodeDetected: (String) -> Unit,
+    setScanning: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        CameraPreview(
+            onBarcodeDetected = onBarcodeDetected,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        IconButton(
+            onClick = setScanning,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back to manual input",
+                tint = Color.White
+            )
+        }
+
+        Text(
+            text = "Point camera at barcode to scan",
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp),
+            color = Color.White
+        )
     }
 }
