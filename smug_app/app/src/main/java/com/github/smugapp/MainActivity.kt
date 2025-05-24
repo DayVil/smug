@@ -18,7 +18,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var bluetoothLEDiscoveryHandler: BluetoothLEDiscoveryHandler
     private lateinit var bluetoothLEConnectionHandler: BluetoothLEConnectionHandler
     private lateinit var mainContent: MainContent
-    private lateinit var db: DrinkRepo
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun onCreate(savedInstanceState: Bundle?) {

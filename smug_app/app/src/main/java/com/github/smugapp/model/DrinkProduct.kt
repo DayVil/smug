@@ -32,18 +32,8 @@ data class DrinkProduct(
 
     @Transient
     val createdAt: Long = System.currentTimeMillis(),
-
-    @Transient
-    val updatedAt: Long = System.currentTimeMillis(),
 ) {
     fun getSensibleName(): String {
         return germanName ?: englishName ?: frenchName ?: defaultName
-    }
-
-    fun withUpdatedTimestamps(): DrinkProduct {
-        return this.copy(
-            createdAt = System.currentTimeMillis(),
-            updatedAt = System.currentTimeMillis()
-        )
     }
 }

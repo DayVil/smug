@@ -8,7 +8,7 @@ import com.github.smugapp.model.DrinkProduct
 
 @Database(
     entities = [DrinkProduct::class],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 abstract class DrinkDb : RoomDatabase() {
@@ -24,7 +24,9 @@ abstract class DrinkDb : RoomDatabase() {
                     context.applicationContext,
                     DrinkDb::class.java,
                     "drink_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration(false)
+                    .build()
                 INSTANCE = instance
                 instance
             }
