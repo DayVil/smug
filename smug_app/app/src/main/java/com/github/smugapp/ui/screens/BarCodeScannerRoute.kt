@@ -30,8 +30,9 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.github.smugapp.off.DrinkProduct
-import com.github.smugapp.off.OffService
+import com.github.smugapp.data.DrinkRepo
+import com.github.smugapp.model.DrinkProduct
+import com.github.smugapp.network.OffService
 import com.github.smugapp.ui.components.CameraPreview
 import com.github.smugapp.ui.components.OffCard
 import kotlinx.coroutines.delay
@@ -51,12 +52,12 @@ sealed interface UiState {
 }
 
 @Composable
-fun BarCodeScannerContent() {
+fun BarCodeScannerContent(repo: DrinkRepo) {
     var uiState by remember { mutableStateOf<UiState>(UiState.Init) }
     var productId by remember { mutableStateOf("") }
     var isScanning by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val client = remember { OffService() }
+    val client = remember { OffService(repo) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     DisposableEffect(Unit) {
@@ -68,6 +69,11 @@ fun BarCodeScannerContent() {
 
     fun searchAction() {
         if (productId.isBlank()) {
+            return
+        }
+
+        if (uiState is UiState.Loading) {
+            Log.d(TAG, "Already loading, ignoring request")
             return
         }
 
