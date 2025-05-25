@@ -12,8 +12,6 @@ import com.github.smugapp.network.ble.BluetoothLEConnectionHandler
 import com.github.smugapp.network.ble.BluetoothLEDiscoveryHandler
 import com.github.smugapp.ui.screens.MainContent
 
-//private const val TAG = "MainActivity"
-
 class MainActivity : ComponentActivity() {
     private lateinit var bluetoothLEDiscoveryHandler: BluetoothLEDiscoveryHandler
     private lateinit var bluetoothLEConnectionHandler: BluetoothLEConnectionHandler
@@ -26,7 +24,6 @@ class MainActivity : ComponentActivity() {
         checkAndRequestPermissions(this)
         
         try {
-            // Initialize both classic Bluetooth and BLE handlers
             bluetoothLEDiscoveryHandler = BluetoothLEDiscoveryHandler(this)
             bluetoothLEConnectionHandler = BluetoothLEConnectionHandler(this)
 
