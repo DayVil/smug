@@ -37,15 +37,15 @@ sealed interface AllowedBarcodes {
         override fun getFormatName() = "EAN-13"
     }
 
-    data object QRCode : AllowedBarcodes {
-        override fun isValidProductCode(value: String): Boolean {
-            return value.isNotBlank()
-        }
-
-        override fun getFormat() = Barcode.FORMAT_QR_CODE
-
-        override fun getFormatName() = "QR Code"
-    }
+//    data object QRCode : AllowedBarcodes {
+//        override fun isValidProductCode(value: String): Boolean {
+//            return value.isNotBlank()
+//        }
+//
+//        override fun getFormat() = Barcode.FORMAT_QR_CODE
+//
+//        override fun getFormatName() = "QR Code"
+//    }
 
     data object DataMatrix : AllowedBarcodes {
         override fun isValidProductCode(value: String): Boolean {
@@ -73,7 +73,7 @@ fun allowedBarcodeFrom(format: Int): AllowedBarcodes? {
         Barcode.FORMAT_UPC_A -> AllowedBarcodes.UpcA
         Barcode.FORMAT_UPC_E -> AllowedBarcodes.UpcE
         Barcode.FORMAT_EAN_13 -> AllowedBarcodes.EAN13
-        Barcode.FORMAT_QR_CODE -> AllowedBarcodes.QRCode
+//        Barcode.FORMAT_QR_CODE -> AllowedBarcodes.QRCode
         Barcode.FORMAT_DATA_MATRIX -> AllowedBarcodes.DataMatrix
         Barcode.FORMAT_PDF417 -> AllowedBarcodes.Pdf417
         else -> null
@@ -84,7 +84,7 @@ fun allowedBarcodes() = setOf(
     AllowedBarcodes.UpcA,
     AllowedBarcodes.UpcE,
     AllowedBarcodes.EAN13,
-    AllowedBarcodes.QRCode,
+//    AllowedBarcodes.QRCode,
     AllowedBarcodes.DataMatrix,
     AllowedBarcodes.Pdf417
 )

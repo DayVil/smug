@@ -1,35 +1,19 @@
-package com.github.smugapp.off
+package com.github.smugapp.model
 
+import androidx.room.Embedded
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
-@Serializable
-data class OffResponse(
-    val code: String,
-    val product: DrinkProduct,
-    val status: Int,
-
-    @SerialName("status_verbose")
-    val statusVerbose: String,
-)
-
-@Serializable
-data class Nutrients(
-    @SerialName("energy-kcal_100g")
-    val caloriesPer100g: Double? = null,
-
-    @SerialName("fat_100g")
-    val saturatedFatPer100g: Double? = null,
-
-    @SerialName("sugars_100g")
-    val sugarsPer100g: Double? = null,
-
-    @SerialName("caffeine_100g")
-    val caffeinePer100g: Double? = null,
-)
-
+@Entity(tableName = "drink_products")
 @Serializable
 data class DrinkProduct(
+    @PrimaryKey
+    @SerialName("_id")
+    val id: String,
+
     @SerialName("product_name")
     val defaultName: String,
 
@@ -42,8 +26,12 @@ data class DrinkProduct(
     @SerialName("product_name_en")
     val englishName: String? = null,
 
+    @Embedded
     @SerialName("nutriments")
     val nutrients: Nutrients? = null,
+
+    @Transient
+    val createdAt: Long = System.currentTimeMillis(),
 ) {
     fun getSensibleName(): String {
         return germanName ?: englishName ?: frenchName ?: defaultName

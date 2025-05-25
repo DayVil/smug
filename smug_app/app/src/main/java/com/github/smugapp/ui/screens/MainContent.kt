@@ -23,6 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.github.smugapp.data.DrinkRepo
 import com.github.smugapp.network.ble.BluetoothLEConnectionHandler
 import com.github.smugapp.network.ble.BluetoothLEDiscoveryHandler
 import com.github.smugapp.ui.theme.SmugAppTheme
@@ -35,9 +36,9 @@ data class NavItem(
 class MainContent(
     mainActivity: ComponentActivity,
     private val bluetoothLEDiscoveryHandler: BluetoothLEDiscoveryHandler,
-    private val bluetoothLEConnectionHandler: BluetoothLEConnectionHandler
+    private val bluetoothLEConnectionHandler: BluetoothLEConnectionHandler,
+    private val repo: DrinkRepo
 ) {
-
     init {
         mainActivity.enableEdgeToEdge()
         mainActivity.setContent {
@@ -63,7 +64,7 @@ class MainContent(
                             )
                         }
                         composable<BarCodeScannerRoute> {
-                            BarCodeScannerContent()
+                            BarCodeScannerContent(repo)
                         }
                     }
                 }
