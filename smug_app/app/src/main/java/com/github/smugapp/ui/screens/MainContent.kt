@@ -6,6 +6,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -47,7 +48,8 @@ class MainContent(
 
                 val navItems = arrayOf(
                     NavItem("Home", Icons.Filled.Home, HomeScreenRoute),
-                    NavItem("Scanner", Icons.Filled.Search, BarCodeScannerRoute)
+                    NavItem("Scanner", Icons.Filled.Search, BarCodeScannerRoute),
+                    NavItem("Main", Icons.Filled.Person, MainScreenRoute)
                 )
 
                 Scaffold(
@@ -66,6 +68,10 @@ class MainContent(
                         composable<BarCodeScannerRoute> {
                             BarCodeScannerContent(repo)
                         }
+                        composable<MainScreenRoute> {
+                            MainScreenContent()
+                        }
+
                     }
                 }
             }
