@@ -7,10 +7,16 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresPermission
 import com.github.smugapp.data.DrinkDb
-import com.github.smugapp.data.DrinkRepo
+import com.github.smugapp.data.MeasurementDb
+import com.github.smugapp.data.SmugRepo
+import com.github.smugapp.model.Measurement
+import com.github.smugapp.model.MeasurementUnit
 import com.github.smugapp.network.ble.BluetoothLEConnectionHandler
 import com.github.smugapp.network.ble.BluetoothLEDiscoveryHandler
 import com.github.smugapp.ui.screens.MainContent
+import kotlinx.coroutines.flow.forEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
     private lateinit var bluetoothLEDiscoveryHandler: BluetoothLEDiscoveryHandler
@@ -32,8 +38,9 @@ class MainActivity : ComponentActivity() {
             Log.e(TAG, "Failed to initialize Bluetooth handlers", e)
         }
 
-        val dao = DrinkDb.getDatabase(this).drinkDao()
-        val repo = DrinkRepo(dao)
+        val drinkDao = DrinkDb.getDatabase(this).drinkDao()
+        val measurementDao = MeasurementDb.getDatabase(this).measurementDao()
+        val repo = SmugRepo(drinkDao, measurementDao)
 
         mainContent = MainContent(
             this,
