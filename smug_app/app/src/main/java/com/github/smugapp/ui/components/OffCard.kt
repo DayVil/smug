@@ -33,6 +33,9 @@ fun OffCard(product: DrinkProduct) {
                 Column {
                     Text(text = "Product name:")
                     Text(text = product.getSensibleName())
+
+                    Text(text = "Brands:", modifier = Modifier.padding(top = 10.dp))
+                    Text(text = product.brands ?: "Unknown")
                 }
 
                 Column {
