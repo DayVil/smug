@@ -26,6 +26,9 @@ data class DrinkProduct(
     @SerialName("product_name_en")
     val englishName: String? = null,
 
+    @SerialName("brands")
+    val brands: String? = null,
+
     @Embedded
     @SerialName("nutriments")
     val nutrients: Nutrients? = null,
