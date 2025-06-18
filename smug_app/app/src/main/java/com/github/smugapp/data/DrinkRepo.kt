@@ -12,6 +12,10 @@ class DrinkRepo(private val drinkDao: DrinkDao) {
         return drinkDao.getAllDrinkProducts(threshold)
     }
 
+    fun getTodayDrinkProducts(): Flow<List<DrinkProduct>> {
+        return drinkDao.getTodayDrinkProducts()
+    }
+
     suspend fun getDrinkProductById(id: String): DrinkProduct? {
         val threshold = pastOffset(3)
         Log.d(TAG, "Getting drink product with ID: $id")

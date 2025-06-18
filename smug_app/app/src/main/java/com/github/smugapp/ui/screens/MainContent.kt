@@ -5,9 +5,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.StackedBarChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -27,6 +27,9 @@ import androidx.navigation.compose.rememberNavController
 import com.github.smugapp.data.DrinkRepo
 import com.github.smugapp.network.ble.BluetoothLEConnectionHandler
 import com.github.smugapp.network.ble.BluetoothLEDiscoveryHandler
+import com.github.smugapp.ui.report.ReportScreen
+import com.github.smugapp.ui.report.ReportScreenRoute
+import com.github.smugapp.ui.report.ReportViewModel
 import com.github.smugapp.ui.theme.SmugAppTheme
 
 
@@ -40,16 +43,16 @@ class MainContent(
     private val bluetoothLEConnectionHandler: BluetoothLEConnectionHandler,
     private val repo: DrinkRepo
 ) {
+    private val reportViewModel = ReportViewModel(repo)
     init {
         mainActivity.enableEdgeToEdge()
         mainActivity.setContent {
             SmugAppTheme {
                 val navController = rememberNavController()
-
                 val navItems = arrayOf(
-                    NavItem("Home", Icons.Filled.Home, HomeScreenRoute),
-                    NavItem("Scanner", Icons.Filled.Search, BarCodeScannerRoute),
-                    NavItem("Main", Icons.Filled.Person, MainScreenRoute)
+                    NavItem("Connection", Icons.Filled.Bluetooth, HomeScreenRoute),
+                    NavItem("Scanner", Icons.Filled.CameraAlt, BarCodeScannerRoute),
+                    NavItem("Report", Icons.Filled.StackedBarChart, ReportScreenRoute)
                 )
 
                 Scaffold(
@@ -61,15 +64,15 @@ class MainContent(
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable<HomeScreenRoute> {
-                            HomeScreenContent(
+                            ConnectionScreenContent(
                                 bluetoothLEDiscoveryHandler, bluetoothLEConnectionHandler
                             )
                         }
                         composable<BarCodeScannerRoute> {
                             BarCodeScannerContent(repo)
                         }
-                        composable<MainScreenRoute> {
-                            MainScreenContent()
+                        composable<ReportScreenRoute> {
+                            ReportScreen(reportViewModel)
                         }
 
                     }
