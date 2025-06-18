@@ -6,15 +6,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -27,14 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.github.smugapp.data.SmugRepo
 import com.github.smugapp.model.DrinkProduct
-import com.github.smugapp.network.OffService
+import com.github.smugapp.network.off.OffService
+import com.github.smugapp.network.off.parseInput
 import com.github.smugapp.ui.components.CameraPreview
 import com.github.smugapp.ui.components.OffCard
+import com.github.smugapp.ui.components.ScannerSearchBox
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -47,7 +42,7 @@ object BarCodeScannerRoute
 sealed interface UiState {
     data object Init : UiState
     data object Loading : UiState
-    data class Success(val data: DrinkProduct) : UiState
+    data class Success(val data: List<DrinkProduct>) : UiState
     data class Error(val exception: Throwable) : UiState
 }
 
@@ -76,21 +71,15 @@ fun BarCodeScannerContent(repo: SmugRepo) {
             Log.d(TAG, "Already loading, ignoring request")
             return
         }
-
-        Log.d(TAG, "Running request for ID: $productId")
         uiState = UiState.Loading
+        val searchTerm = parseInput(productId)
         scope.launch {
-            val product = client.fetchProduct(productId)
-            uiState = product.fold(
-                onSuccess = {
-                    Log.d(TAG, "Success: $it")
-                    UiState.Success(it)
-                },
-                onFailure = {
-                    Log.d(TAG, "Failure: $it")
-                    UiState.Error(it)
-                }
-            )
+            val product = client.fetchProduct(searchTerm)
+            uiState = if (product.isNotEmpty()) {
+                UiState.Success(product)
+            } else {
+                UiState.Error(Exception("No product found"))
+            }
         }
         keyboardController?.hide()
     }
@@ -119,48 +108,13 @@ fun BarCodeScannerContent(repo: SmugRepo) {
                     .padding(start = 20.dp, top = 16.dp, end = 20.dp)
                     .fillMaxWidth()
             ) {
-                OutlinedTextField(
-                    value = productId,
-                    onValueChange = { productId = it },
-                    label = { Text("Product ID") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Search
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onSearch = {
-                            searchAction()
-                        }
-                    ),
-                    trailingIcon = {
-                        IconButton(
-                            onClick = { searchAction() },
-                            enabled = productId.isNotBlank() && uiState !is UiState.Loading
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Search,
-                                contentDescription = "Search"
-                            )
-                        }
-                    },
-                    leadingIcon = {
-                        IconButton(
-                            onClick = {
-                                isScanning = true
-                            },
-                            enabled = uiState !is UiState.Loading
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.CameraAlt,
-                                contentDescription = "Scan barcode"
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = uiState !is UiState.Loading
+                ScannerSearchBox(
+                    productId = productId,
+                    setProductId = { productId = it },
+                    uiState = uiState,
+                    onScanAction = { isScanning = true },
+                    searchAction = { searchAction() }
                 )
-
 
                 when (val state = uiState) {
                     is UiState.Loading -> {
@@ -168,7 +122,7 @@ fun BarCodeScannerContent(repo: SmugRepo) {
                     }
 
                     is UiState.Success -> {
-                        OffCard(state.data)
+                        OffCard(state.data[0])
                     }
 
                     is UiState.Error -> {
