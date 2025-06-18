@@ -1,7 +1,7 @@
 package com.github.smugapp.network
 
 import android.util.Log
-import com.github.smugapp.data.DrinkRepo
+import com.github.smugapp.data.SmugRepo
 import com.github.smugapp.model.DrinkProduct
 import com.github.smugapp.model.OffResponse
 import io.ktor.client.HttpClient
@@ -21,7 +21,7 @@ import java.nio.channels.UnresolvedAddressException
 
 const val TAG = "OffService"
 
-class OffService(private val repo: DrinkRepo) {
+class OffService(private val repo: SmugRepo) {
     private val urlOpenFoodFacts = "https://world.openfoodfacts.net/api/v2"
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
