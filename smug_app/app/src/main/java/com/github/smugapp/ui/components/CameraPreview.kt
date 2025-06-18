@@ -55,40 +55,41 @@ private fun startCamera(
 ) {
     val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
-    cameraProviderFuture.addListener({
-        try {
-            val cameraProvider = cameraProviderFuture.get()
+    cameraProviderFuture.addListener(
+        {
+            try {
+                val cameraProvider = cameraProviderFuture.get()
 
-            val preview = Preview
-                .Builder()
-                .build()
-                .also {
-                    it.surfaceProvider = previewView.surfaceProvider
-                }
+                val preview = Preview
+                    .Builder()
+                    .build()
+                    .also {
+                        it.surfaceProvider = previewView.surfaceProvider
+                    }
 
-            val imageAnalyzer = ImageAnalysis
-                .Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor, ImageAnalyzer(onBarcodeDetected))
-                }
+                val imageAnalyzer = ImageAnalysis
+                    .Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+                    .also {
+                        it.setAnalyzer(cameraExecutor, ImageAnalyzer(onBarcodeDetected))
+                    }
 
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-            cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
-                lifecycleOwner,
-                cameraSelector,
-                preview,
-                imageAnalyzer
-            )
+                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector,
+                    preview,
+                    imageAnalyzer
+                )
 
-            Log.d(TAG, "Camera started successfully")
+                Log.d(TAG, "Camera started successfully")
 
-        } catch (exc: Exception) {
-            Log.e(TAG, "Use case binding failed", exc)
-        }
-    },
+            } catch (exc: Exception) {
+                Log.e(TAG, "Use case binding failed", exc)
+            }
+        },
         ContextCompat.getMainExecutor(context)
     )
 } 

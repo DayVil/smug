@@ -107,13 +107,13 @@ class BluetoothDiscoveryHandler(private val context: Context) : NetworkDiscovery
         }
 
         _discoveredDevices.value = emptySet()
-        
+
         val success = bluetoothAdapter.startDiscovery()
         Log.d(
             TAG,
             "Discovery start result: ${if (success) "success" else "failed"}"
         )
-        
+
         if (!success) {
             Log.e(TAG, "Failed to start discovery. Possible reasons:")
             Log.e(TAG, "1. Bluetooth is not enabled")
@@ -139,7 +139,7 @@ class BluetoothDiscoveryHandler(private val context: Context) : NetworkDiscovery
                 "- Discovery in progress: ${bluetoothAdapter.isDiscovering}"
             )
         }
-        
+
         return success
     }
 

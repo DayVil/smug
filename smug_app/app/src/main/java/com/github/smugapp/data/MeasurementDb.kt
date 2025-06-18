@@ -11,7 +11,7 @@ import com.github.smugapp.model.Measurement
     version = 1,
     exportSchema = false
 )
-abstract class MeasurementDb: RoomDatabase() {
+abstract class MeasurementDb : RoomDatabase() {
     abstract fun measurementDao(): MeasurementDao
 
     companion object {

@@ -9,14 +9,9 @@ import androidx.annotation.RequiresPermission
 import com.github.smugapp.data.DrinkDb
 import com.github.smugapp.data.MeasurementDb
 import com.github.smugapp.data.SmugRepo
-import com.github.smugapp.model.Measurement
-import com.github.smugapp.model.MeasurementUnit
 import com.github.smugapp.network.ble.BluetoothLEConnectionHandler
 import com.github.smugapp.network.ble.BluetoothLEDiscoveryHandler
 import com.github.smugapp.ui.screens.MainContent
-import kotlinx.coroutines.flow.forEach
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
     private lateinit var bluetoothLEDiscoveryHandler: BluetoothLEDiscoveryHandler
@@ -28,7 +23,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         checkAndRequestPermissions(this)
-        
+
         try {
             bluetoothLEDiscoveryHandler = BluetoothLEDiscoveryHandler(this)
             bluetoothLEConnectionHandler = BluetoothLEConnectionHandler(this)
