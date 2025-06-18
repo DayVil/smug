@@ -42,7 +42,7 @@ object HomeScreenRoute
 
 @SuppressLint("MissingPermission")
 @Composable
-fun HomeScreenContent(
+fun ConnectionScreenContent(
     bluetoothLEDiscoveryHandler: BluetoothLEDiscoveryHandler,
     bluetoothLEConnectionHandler: BluetoothLEConnectionHandler
 ) {
