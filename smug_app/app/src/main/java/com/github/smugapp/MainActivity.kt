@@ -7,7 +7,8 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresPermission
 import com.github.smugapp.data.DrinkDb
-import com.github.smugapp.data.DrinkRepo
+import com.github.smugapp.data.MeasurementDb
+import com.github.smugapp.data.SmugRepo
 import com.github.smugapp.network.ble.BluetoothLEConnectionHandler
 import com.github.smugapp.network.ble.BluetoothLEDiscoveryHandler
 import com.github.smugapp.ui.screens.MainContent
@@ -22,7 +23,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         checkAndRequestPermissions(this)
-        
+
         try {
             bluetoothLEDiscoveryHandler = BluetoothLEDiscoveryHandler(this)
             bluetoothLEConnectionHandler = BluetoothLEConnectionHandler(this)
@@ -32,8 +33,9 @@ class MainActivity : ComponentActivity() {
             Log.e(TAG, "Failed to initialize Bluetooth handlers", e)
         }
 
-        val dao = DrinkDb.getDatabase(this).drinkDao()
-        val repo = DrinkRepo(dao)
+        val drinkDao = DrinkDb.getDatabase(this).drinkDao()
+        val measurementDao = MeasurementDb.getDatabase(this).measurementDao()
+        val repo = SmugRepo(drinkDao, measurementDao)
 
         mainContent = MainContent(
             this,
