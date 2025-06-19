@@ -72,7 +72,7 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
 
-    implementation(libs.barcode.scanning)
+    implementation(libs.play.services.mlkit.barcode.scanning)
 
     implementation(libs.camerax.core)
     implementation(libs.camerax.camera2)

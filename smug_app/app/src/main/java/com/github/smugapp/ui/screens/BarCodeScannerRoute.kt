@@ -3,14 +3,16 @@ package com.github.smugapp.ui.screens
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -119,6 +121,7 @@ fun BarCodeScannerContent(repo: SmugRepo) {
                     .padding(start = 20.dp, top = 16.dp, end = 20.dp)
                     .fillMaxWidth()
             ) {
+
                 OutlinedTextField(
                     value = productId,
                     onValueChange = { productId = it },
@@ -152,7 +155,7 @@ fun BarCodeScannerContent(repo: SmugRepo) {
                             enabled = uiState !is UiState.Loading
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.CameraAlt,
+                                imageVector = Icons.Filled.QrCodeScanner,
                                 contentDescription = "Scan barcode"
                             )
                         }
@@ -160,8 +163,6 @@ fun BarCodeScannerContent(repo: SmugRepo) {
                     modifier = Modifier.fillMaxWidth(),
                     enabled = uiState !is UiState.Loading
                 )
-
-
                 when (val state = uiState) {
                     is UiState.Loading -> {
                         Text(text = "Loading...", modifier = Modifier.padding(top = 16.dp))
