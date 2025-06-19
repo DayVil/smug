@@ -27,9 +27,9 @@ import androidx.navigation.compose.rememberNavController
 import com.github.smugapp.data.SmugRepo
 import com.github.smugapp.network.ble.BluetoothLEConnectionHandler
 import com.github.smugapp.network.ble.BluetoothLEDiscoveryHandler
-import com.github.smugapp.ui.report.ReportScreen
-import com.github.smugapp.ui.report.ReportScreenRoute
-import com.github.smugapp.ui.report.ReportViewModel
+import com.github.smugapp.ui.screens.report.ReportScreen
+import com.github.smugapp.ui.screens.report.ReportScreenRoute
+import com.github.smugapp.ui.screens.report.ReportViewModel
 import com.github.smugapp.ui.theme.SmugAppTheme
 
 

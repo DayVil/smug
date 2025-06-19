@@ -1,8 +1,8 @@
-package com.github.smugapp.ui.report
+package com.github.smugapp.ui.screens.report
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.smugapp.data.DrinkRepo
+import com.github.smugapp.data.SmugRepo
 import com.github.smugapp.model.DrinkProduct
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 
-class ReportViewModel(private val repo: DrinkRepo) : ViewModel() {
+class ReportViewModel(repo: SmugRepo) : ViewModel() {
 
     private val _todayDrinks = repo.getTodayDrinkProducts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
