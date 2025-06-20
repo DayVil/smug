@@ -14,7 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import com.github.smugapp.ui.screens.UiState
+import com.github.smugapp.network.off.SearchState
 
 private const val TAG = "BarCodeScanner"
 
@@ -22,7 +22,7 @@ private const val TAG = "BarCodeScanner"
 fun ScannerSearchBox(
     productId: String,
     setProductId: (String) -> Unit,
-    uiState: UiState,
+    uiState: SearchState,
     onScanAction: () -> Unit,
     searchAction: () -> Unit
 ) {
@@ -43,7 +43,7 @@ fun ScannerSearchBox(
         trailingIcon = {
             IconButton(
                 onClick = { searchAction() },
-                enabled = productId.isNotBlank() && uiState !is UiState.Loading
+                enabled = productId.isNotBlank() && uiState !is SearchState.Loading
             ) {
                 Icon(
                     imageVector = Icons.Filled.Search,
@@ -54,7 +54,7 @@ fun ScannerSearchBox(
         leadingIcon = {
             IconButton(
                 onClick = onScanAction,
-                enabled = uiState !is UiState.Loading
+                enabled = uiState !is SearchState.Loading
             ) {
                 Icon(
                     imageVector = Icons.Filled.QrCodeScanner,
@@ -63,7 +63,7 @@ fun ScannerSearchBox(
             }
         },
         modifier = Modifier.fillMaxWidth(),
-        enabled = uiState !is UiState.Loading
+        enabled = uiState !is SearchState.Loading
     )
 }
 

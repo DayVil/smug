@@ -17,9 +17,21 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.appendPathSegments
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 
 const val TAG = "OffService"
+
+sealed interface SearchState {
+    data object Init : SearchState
+    data object Loading : SearchState
+    data class Success(val products: List<DrinkProduct>, val isComplete: Boolean = true) :
+        SearchState
+
+    data class Error(val reason: String) : SearchState
+}
 
 class OffService(private val repo: SmugRepo) {
     private val urlOpenFoodFacts = "https://world.openfoodfacts.net/api/v2"
@@ -32,6 +44,9 @@ class OffService(private val repo: SmugRepo) {
             })
         }
     }
+
+    private val _searchState = MutableStateFlow<SearchState>(SearchState.Init)
+    val searchState: StateFlow<SearchState> = _searchState.asStateFlow()
 
     private suspend fun fetchHttpProductRequest(code: String) = client.request(urlOpenFoodFacts) {
         method = HttpMethod.Get
@@ -97,34 +112,60 @@ class OffService(private val repo: SmugRepo) {
             }
 
             val offResponse = response.body<OffSearchResponse>()
-            val products = offResponse.products.mapNotNull {
-                Log.d(TAG, "Fetching product by bar code: ${it.code}")
-                fetchProductByBarCode(it.code)
+            val products = mutableListOf<DrinkProduct>()
+
+            _searchState.value = SearchState.Success(emptyList(), false)
+
+            offResponse.products.forEach { productInfo ->
+                Log.d(TAG, "Fetching product by bar code: ${productInfo.code}")
+                val product = fetchProductByBarCode(productInfo.code)
+                if (product != null) {
+                    products.add(product)
+                    _searchState.value = SearchState.Success(products.toList(), false)
+                }
             }
+
+            // Mark as complete
+            _searchState.value = SearchState.Success(products.toList(), true)
             return products
         } catch (e: Exception) {
             return emptyList()
         }
     }
 
-    suspend fun fetchProduct(searchTerm: InputParser): List<DrinkProduct> {
-        Log.d(TAG, "Fetching product for search term: $searchTerm")
+    suspend fun searchProduct(searchTerm: InputParser) {
+        Log.d(TAG, "Searching for product: $searchTerm")
+        _searchState.value = SearchState.Loading
 
-        return when (searchTerm) {
-            is InputParser.BarCodeSearchTerm -> {
-                val product = fetchProductByBarCode(searchTerm.value)
-                if (product != null) {
-                    listOf(product)
-                } else {
-                    emptyList()
+        try {
+            val products = when (searchTerm) {
+                is InputParser.BarCodeSearchTerm -> {
+                    val product = fetchProductByBarCode(searchTerm.value)
+                    if (product != null) {
+                        listOf(product)
+                    } else {
+                        emptyList()
+                    }
                 }
+
+                is InputParser.ProductSearchTerm -> {
+                    fetchProductBySearchTerm(searchTerm.value)
+                    return
+                }
+
+                is InputParser.UnknownSearchTerm -> emptyList()
             }
 
-            is InputParser.ProductSearchTerm -> fetchProductBySearchTerm(searchTerm.value)
-            is InputParser.UnknownSearchTerm -> emptyList()
+            _searchState.value = if (products.isNotEmpty()) {
+                SearchState.Success(products)
+            } else {
+                SearchState.Error("No products found")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error searching for product", e)
+            _searchState.value = SearchState.Error("Search failed: ${e.message}")
         }
     }
-
 
     fun close() {
         client.close()
