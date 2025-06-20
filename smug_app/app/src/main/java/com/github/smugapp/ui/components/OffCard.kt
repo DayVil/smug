@@ -19,7 +19,7 @@ fun OffCard(product: DrinkProduct) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 20.dp),
+            .padding(vertical = 4.dp),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 3.dp
         )
@@ -31,11 +31,19 @@ fun OffCard(product: DrinkProduct) {
                 modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
+                    val maxLen = 20
                     Text(text = "Product name:")
-                    Text(text = product.getSensibleName())
-
+                    var sensibleName = product.getSensibleName()
+                    if (sensibleName.length > maxLen) {
+                        sensibleName = sensibleName.substring(0, maxLen) + "..."
+                    }
+                    Text(text = sensibleName)
                     Text(text = "Brands:", modifier = Modifier.padding(top = 10.dp))
-                    Text(text = product.brands ?: "Unknown")
+                    var brands = product.brands ?: "Unknown"
+                    if (brands.length > maxLen) {
+                        brands = brands.substring(0, maxLen) + "..."
+                    }
+                    Text(text = brands)
                 }
 
                 Column {

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
@@ -13,6 +14,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,8 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import com.github.smugapp.data.SmugRepo
-import com.github.smugapp.model.DrinkProduct
 import com.github.smugapp.network.off.OffService
+import com.github.smugapp.network.off.SearchState
 import com.github.smugapp.network.off.parseInput
 import com.github.smugapp.ui.components.CameraPreview
 import com.github.smugapp.ui.components.OffCard
@@ -39,21 +41,14 @@ private const val TAG = "BarCodeScanner"
 @Serializable
 object BarCodeScannerRoute
 
-sealed interface UiState {
-    data object Init : UiState
-    data object Loading : UiState
-    data class Success(val data: List<DrinkProduct>) : UiState
-    data class Error(val exception: Throwable) : UiState
-}
-
 @Composable
 fun BarCodeScannerContent(repo: SmugRepo) {
-    var uiState by remember { mutableStateOf<UiState>(UiState.Init) }
     var productId by remember { mutableStateOf("") }
     var isScanning by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val client = remember { OffService(repo) }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val uiState by client.searchState.collectAsState()
 
     DisposableEffect(Unit) {
         onDispose {
@@ -67,19 +62,14 @@ fun BarCodeScannerContent(repo: SmugRepo) {
             return
         }
 
-        if (uiState is UiState.Loading) {
+        if (uiState is SearchState.Loading) {
             Log.d(TAG, "Already loading, ignoring request")
             return
         }
-        uiState = UiState.Loading
+
         val searchTerm = parseInput(productId)
         scope.launch {
-            val product = client.fetchProduct(searchTerm)
-            uiState = if (product.isNotEmpty()) {
-                UiState.Success(product)
-            } else {
-                UiState.Error(Exception("No product found"))
-            }
+            client.searchProduct(searchTerm)
         }
         keyboardController?.hide()
     }
@@ -117,23 +107,46 @@ fun BarCodeScannerContent(repo: SmugRepo) {
                 )
 
                 when (val state = uiState) {
-                    is UiState.Loading -> {
+                    is SearchState.Loading -> {
                         Text(text = "Loading...", modifier = Modifier.padding(top = 16.dp))
                     }
 
-                    is UiState.Success -> {
-                        OffCard(state.data[0])
+                    is SearchState.Success -> {
+                        if (state.products.isEmpty() && state.isComplete) {
+                            Text(
+                                text = "No products found",
+                                modifier = Modifier.padding(top = 16.dp)
+                            )
+                        } else {
+                            Column(
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                LazyColumn {
+                                    items(state.products.size) { index ->
+                                        OffCard(state.products[index])
+                                    }
+                                }
+
+                                if (!state.isComplete) {
+                                    Text(
+                                        text = "Loading more results...",
+                                        modifier = Modifier.padding(top = 8.dp),
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
+                        }
                     }
 
-                    is UiState.Error -> {
+                    is SearchState.Error -> {
                         Text(
-                            text = "Error: ${state.exception}",
+                            text = "Error: ${state.reason}",
                             modifier = Modifier.padding(top = 16.dp)
                         )
-                        Log.d(TAG, "Error: ${state.exception}")
+                        Log.d(TAG, "Error: ${state.reason}")
                     }
 
-                    UiState.Init -> {
+                    SearchState.Init -> {
                         Text(
                             text = "Enter a product ID to search or tap camera to scan",
                             modifier = Modifier.padding(top = 16.dp)
