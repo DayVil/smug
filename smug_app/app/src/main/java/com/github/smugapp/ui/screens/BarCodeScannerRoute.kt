@@ -32,7 +32,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.github.smugapp.data.DrinkRepo
+import com.github.smugapp.data.SmugRepo
 import com.github.smugapp.model.DrinkProduct
 import com.github.smugapp.network.OffService
 import com.github.smugapp.ui.components.CameraPreview
@@ -54,7 +54,7 @@ sealed interface UiState {
 }
 
 @Composable
-fun BarCodeScannerContent(repo: DrinkRepo) {
+fun BarCodeScannerContent(repo: SmugRepo) {
     var uiState by remember { mutableStateOf<UiState>(UiState.Init) }
     var productId by remember { mutableStateOf("") }
     var isScanning by remember { mutableStateOf(false) }
