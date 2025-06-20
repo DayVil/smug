@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
@@ -43,7 +44,7 @@ sealed interface UiState {
     data object Init : UiState
     data object Loading : UiState
     data class Success(val data: List<DrinkProduct>) : UiState
-    data class Error(val exception: Throwable) : UiState
+    data class Error(val reason: String) : UiState
 }
 
 @Composable
@@ -78,7 +79,7 @@ fun BarCodeScannerContent(repo: SmugRepo) {
             uiState = if (product.isNotEmpty()) {
                 UiState.Success(product)
             } else {
-                UiState.Error(Exception("No product found"))
+                UiState.Error("No product found")
             }
         }
         keyboardController?.hide()
@@ -122,15 +123,21 @@ fun BarCodeScannerContent(repo: SmugRepo) {
                     }
 
                     is UiState.Success -> {
-                        OffCard(state.data[0])
+                        LazyColumn(
+                            modifier = Modifier.padding(top = 8.dp)
+                        ) {
+                            items(state.data.size) { index ->
+                                OffCard(state.data[index])
+                            }
+                        }
                     }
 
                     is UiState.Error -> {
                         Text(
-                            text = "Error: ${state.exception}",
+                            text = "Error: ${state.reason}",
                             modifier = Modifier.padding(top = 16.dp)
                         )
-                        Log.d(TAG, "Error: ${state.exception}")
+                        Log.d(TAG, "Error: ${state.reason}")
                     }
 
                     UiState.Init -> {
