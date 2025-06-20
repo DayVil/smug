@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,7 +57,7 @@ fun ScannerSearchBox(
                 enabled = uiState !is UiState.Loading
             ) {
                 Icon(
-                    imageVector = Icons.Filled.CameraAlt,
+                    imageVector = Icons.Filled.QrCodeScanner,
                     contentDescription = "Scan barcode"
                 )
             }
