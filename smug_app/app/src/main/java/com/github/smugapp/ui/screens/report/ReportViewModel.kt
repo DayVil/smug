@@ -3,6 +3,7 @@ package com.github.smugapp.ui.screens.report
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.smugapp.data.SmugRepo
+
 import com.github.smugapp.model.DrinkProduct
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -10,17 +11,24 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 
-class ReportViewModel(repo: SmugRepo) : ViewModel() {
+class ReportViewModel(private val repo: SmugRepo) : ViewModel() {
+        private val _todayDrinks = repo.getTodayDrinkProducts()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
+        val todayDrinks: StateFlow<List<DrinkProduct>> = _todayDrinks
 
-    private val _todayDrinks = repo.getTodayDrinkProducts()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
-    val todayDrinks: StateFlow<List<DrinkProduct>> = _todayDrinks
+        val totalCalories: StateFlow<Double> = _todayDrinks
+            .map { drinks ->
+                drinks.sumOf { it.nutrients?.caloriesPer100g ?: 0.0 }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0.0)
+        private val _weeklyDrinks = repo.getWeeklyDrinkProducts()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
-    val totalCalories: StateFlow<Double> = _todayDrinks
-        .map { drinks ->
-            drinks.sumOf { it.nutrients?.caloriesPer100g ?: 0.0 }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0.0)
-}
+        val weeklyDrinks: StateFlow<List<DrinkProduct>> = _weeklyDrinks
+
+        val weeklyCalories: StateFlow<Double> = _weeklyDrinks
+            .map { drinks -> drinks.sumOf { it.nutrients?.caloriesPer100g ?: 0.0 } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0.0)
 
 
+    }

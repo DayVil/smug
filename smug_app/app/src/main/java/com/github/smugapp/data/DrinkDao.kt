@@ -26,6 +26,13 @@ interface DrinkDao {
 
     @Query(
         "SELECT * FROM drink_products " +
+                "WHERE datetime(createdAt / 1000, 'unixepoch') >= datetime('now', '-7 days') " +
+                "ORDER BY createdAt DESC"
+    )
+    fun getWeeklyDrinkProducts(): Flow<List<DrinkProduct>>
+
+    @Query(
+        "SELECT * FROM drink_products " +
                 "WHERE id = :id AND createdAt >= :timestampThreshold " +
                 "ORDER BY createdAt DESC"
     )
