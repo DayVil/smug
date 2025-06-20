@@ -17,6 +17,12 @@ interface DrinkDao {
                 "ORDER BY createdAt DESC"
     )
     fun getAllDrinkProducts(timestampThreshold: Long): Flow<List<DrinkProduct>>
+    @Query(
+        "SELECT * FROM drink_products " +
+                "WHERE date(createdAt / 1000, 'unixepoch') = date('now') " +
+                "ORDER BY createdAt DESC"
+    )
+    fun getTodayDrinkProducts(): Flow<List<DrinkProduct>>
 
     @Query(
         "SELECT * FROM drink_products " +
