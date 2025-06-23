@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 
 class ReportViewModel(private val repo: SmugRepo) : ViewModel() {
@@ -29,6 +30,9 @@ class ReportViewModel(private val repo: SmugRepo) : ViewModel() {
         val weeklyCalories: StateFlow<Double> = _weeklyDrinks
             .map { drinks -> drinks.sumOf { it.nutrients?.caloriesPer100g ?: 0.0 } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0.0)
-
-
+        fun deleteDrinkProduct(drinkProduct: DrinkProduct) {
+            viewModelScope.launch {
+                repo.deleteDrinkProduct(drinkProduct)
+            }
+        }
     }

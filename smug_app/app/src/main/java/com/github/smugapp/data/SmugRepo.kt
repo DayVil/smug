@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.Flow
 const val TAG = "DrinkRepo"
 
 class SmugRepo(private val drinkDao: DrinkDao, private val measurementDao: MeasurementDao) {
-    fun getAllDrinkProducts(): Flow<List<DrinkProduct>> {
-        val threshold = pastOffset(3)
-        return drinkDao.getAllDrinkProducts(threshold)
-    }
+//    fun getAllDrinkProducts(): Flow<List<DrinkProduct>> {
+//        val threshold = pastOffset(3)
+//        return drinkDao.getAllDrinkProducts(threshold)
+//    }
 
     fun getTodayDrinkProducts(): Flow<List<DrinkProduct>> {
         return drinkDao.getTodayDrinkProducts()
@@ -32,16 +32,20 @@ class SmugRepo(private val drinkDao: DrinkDao, private val measurementDao: Measu
         drinkDao.insertDrinkProduct(product)
     }
 
-    fun getAllMeasurements(): Flow<List<Measurement>> {
-        return measurementDao.getAllMeasurements()
-    }
+//    fun getAllMeasurements(): Flow<List<Measurement>> {
+//        return measurementDao.getAllMeasurements()
+//    }
+//
+//    suspend fun insertMeasurement(measurement: Measurement) {
+//        measurementDao.insertMeasurement(measurement)
+//    }
+//
+//    suspend fun deleteMeasurementById(id: Long) {
+//        measurementDao.deleteMeasurementById(id)
+//    }
 
-    suspend fun insertMeasurement(measurement: Measurement) {
-        measurementDao.insertMeasurement(measurement)
-    }
-
-    suspend fun deleteMeasurementById(id: Long) {
-        measurementDao.deleteMeasurementById(id)
+    suspend fun deleteDrinkProduct(drinkProduct: DrinkProduct) {
+        drinkDao.deleteDrinkProduct(drinkProduct)
     }
 
     private fun pastOffset(monthAmount: Int) =

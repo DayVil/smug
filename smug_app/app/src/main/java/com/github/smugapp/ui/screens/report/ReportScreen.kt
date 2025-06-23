@@ -43,12 +43,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import kotlinx.serialization.Serializable
 
+//import androidx.compose.foundation.layout.*
+//import androidx.compose.foundation.lazy.LazyColumn
+//import androidx.compose.foundation.lazy.items
+//import androidx.compose.material.icons.Icons
+//import androidx.compose.material.icons.filled.AddChart
+//import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Delete
+//import androidx.compose.material.icons.filled.FilterAltOff
+import androidx.compose.material3.*
+//import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+//import androidx.compose.ui.Alignment
+//import androidx.compose.ui.Modifier
+//import androidx.compose.ui.graphics.Color
+//import androidx.compose.ui.text.font.FontWeight
+//import androidx.compose.ui.text.style.TextOverflow
+//import androidx.compose.ui.unit.dp
+import com.github.smugapp.model.DrinkProduct
+//import androidx.compose.runtime.getValue
+//import androidx.compose.runtime.setValue
+
 @Serializable
 object ReportScreenRoute
 
 @Composable
 fun ReportScreen(viewModel: ReportViewModel) {
-    var showWeekly by remember { mutableStateOf(false) }
+    var showWeekly by rememberSaveable { mutableStateOf(false) }
 
     val drinks by if (showWeekly) {
         viewModel.weeklyDrinks.collectAsState()
@@ -60,6 +81,34 @@ fun ReportScreen(viewModel: ReportViewModel) {
         viewModel.weeklyCalories.collectAsState()
     } else {
         viewModel.totalCalories.collectAsState()
+    }
+
+    // State for deletion
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var drinkToDelete by remember { mutableStateOf<DrinkProduct?>(null) }
+
+    // Deletion confirmation dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Beverage") },
+            text = { Text("Are you sure you want to delete this beverage entry?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        drinkToDelete?.let { viewModel.deleteDrinkProduct(it) }
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     val chartStates = remember(drinks) {
@@ -131,16 +180,34 @@ fun ReportScreen(viewModel: ReportViewModel) {
                             modifier = Modifier.weight(1f)
                         )
 
-                        IconButton(
-                            onClick = {
-                                chartStates[drink.id] = !(chartStates[drink.id] ?: false)
+                        // Action buttons row
+                        Row {
+                            // Delete button
+                            IconButton(
+                                onClick = {
+                                    drinkToDelete = drink
+                                    showDeleteDialog = true
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete beverage",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AddChart,
-                                contentDescription = "Nährwerte als Diagramm anzeigen",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+
+                            // Chart toggle button
+                            IconButton(
+                                onClick = {
+                                    chartStates[drink.id] = !(chartStates[drink.id] ?: false)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AddChart,
+                                    contentDescription = "Show nutrient chart",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
 
@@ -187,12 +254,12 @@ fun ReportScreen(viewModel: ReportViewModel) {
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
-                    //  .align(Alignment.End)
                     .padding(top = 8.dp)
             )
         }
     }
 }
+
 
 @Composable
 fun NutrientItem(label: String, value: String) {
