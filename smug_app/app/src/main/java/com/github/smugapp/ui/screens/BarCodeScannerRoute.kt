@@ -41,6 +41,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.TextField
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+
+
 private const val TAG = "BarCodeScanner"
 
 @Serializable
@@ -55,10 +63,13 @@ fun BarCodeScannerContent(repo: SmugRepo) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val uiState by client.searchState.collectAsState()
 
-    // --- Start of new code: State for confirmation dialog ---
     var showConfirmationDialog by remember { mutableStateOf(false) }
     var selectedProduct by remember { mutableStateOf<DrinkProduct?>(null) }
+
+    // --- Start of new code: State for weight input ---
+    var weightInput by remember { mutableStateOf("100") }
     // --- End of new code ---
+
 
     DisposableEffect(Unit) {
         onDispose {
@@ -67,22 +78,58 @@ fun BarCodeScannerContent(repo: SmugRepo) {
         }
     }
 
-    // --- Start of new code: Confirmation Dialog Composable ---
+    // --- Start of modified code: Updated Confirmation Dialog ---
     if (showConfirmationDialog && selectedProduct != null) {
         AlertDialog(
             onDismissRequest = { showConfirmationDialog = false },
             title = { Text(text = "Add Drink") },
-            text = { Text(text = "Do you want to add '${selectedProduct!!.defaultName}' to your list?") },
+            text = {
+                Column {
+                    Text(text = "Enter the amount of '${selectedProduct!!.getSensibleName()}' consumed (in g/ml).")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextField(
+                        value = weightInput,
+                        onValueChange = { weightInput = it },
+                        label = { Text("Amount (g/ml)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        )
+                    )
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {
-                        selectedProduct?.let { product ->
+                        val productToSave = selectedProduct
+                        val consumedAmount = weightInput.toIntOrNull() ?: 100
+
+                        if (productToSave != null) {
+                            // Scale the nutrients based on the input amount
+                            val scaleFactor = consumedAmount / 100.0
+                            val scaledNutrients = productToSave.nutrients?.copy(
+                                caloriesPer100g = (productToSave.nutrients.caloriesPer100g ?: 0.0) * scaleFactor,
+                                sugarsPer100g = (productToSave.nutrients.sugarsPer100g ?: 0.0) * scaleFactor,
+                                caffeinePer100g = (productToSave.nutrients.caffeinePer100g ?: 0.0) * scaleFactor,
+                                saturatedFatPer100g = (productToSave.nutrients.saturatedFatPer100g ?: 0.0) * scaleFactor
+                            )
+
+                            // Create a new product instance with a new timestamp (primary key) and scaled data
+                            val finalProduct = productToSave.copy(
+                                createdAt = System.currentTimeMillis(), // New unique key
+                                consumedAmount = consumedAmount,
+                                nutrients = scaledNutrients
+                            )
+
                             scope.launch {
-                                repo.insertDrinkProduct(product)
+                                repo.insertDrinkProduct(finalProduct)
                             }
                         }
+
                         showConfirmationDialog = false
-                        selectedProduct = null // Reset selected product
+                        selectedProduct = null
+                        weightInput = "100" // Reset for next use
                     }
                 ) {
                     Text("Confirm")
@@ -92,7 +139,8 @@ fun BarCodeScannerContent(repo: SmugRepo) {
                 TextButton(
                     onClick = {
                         showConfirmationDialog = false
-                        selectedProduct = null // Reset selected product
+                        selectedProduct = null
+                        weightInput = "100" // Reset for next use
                     }
                 ) {
                     Text("Cancel")
@@ -100,7 +148,6 @@ fun BarCodeScannerContent(repo: SmugRepo) {
             }
         )
     }
-    // --- End of new code ---
 
     fun searchAction() {
         if (productId.isBlank()) {

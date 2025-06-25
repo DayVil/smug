@@ -18,22 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddChart
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterAltOff
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,28 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
-import kotlinx.serialization.Serializable
-
-//import androidx.compose.foundation.layout.*
-//import androidx.compose.foundation.lazy.LazyColumn
-//import androidx.compose.foundation.lazy.items
-//import androidx.compose.material.icons.Icons
-//import androidx.compose.material.icons.filled.AddChart
-//import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Delete
-//import androidx.compose.material.icons.filled.FilterAltOff
-import androidx.compose.material3.*
-//import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-//import androidx.compose.ui.Alignment
-//import androidx.compose.ui.Modifier
-//import androidx.compose.ui.graphics.Color
-//import androidx.compose.ui.text.font.FontWeight
-//import androidx.compose.ui.text.style.TextOverflow
-//import androidx.compose.ui.unit.dp
 import com.github.smugapp.model.DrinkProduct
-//import androidx.compose.runtime.getValue
-//import androidx.compose.runtime.setValue
+import kotlinx.serialization.Serializable
 
 @Serializable
 object ReportScreenRoute
@@ -111,9 +80,11 @@ fun ReportScreen(viewModel: ReportViewModel) {
         )
     }
 
+    // A bug in compose requires a non-primitive key for mutableStateMapOf to recompose correctly
+    // Using the timestamp, which is our primary key, is a reliable choice.
     val chartStates = remember(drinks) {
-        mutableStateMapOf<String, Boolean>().apply {
-            drinks.forEach { put(it.id, false) }
+        mutableStateMapOf<Long, Boolean>().apply {
+            drinks.forEach { put(it.createdAt, false) }
         }
     }
 
@@ -148,13 +119,13 @@ fun ReportScreen(viewModel: ReportViewModel) {
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        items(drinks) { drink ->
+        items(drinks, key = { it.createdAt }) { drink ->
             val kcal = drink.nutrients?.caloriesPer100g?.toFloat() ?: 0f
             val sugar = drink.nutrients?.sugarsPer100g?.toFloat() ?: 0f
             val caffeine = drink.nutrients?.caffeinePer100g?.toFloat() ?: 0f
             val fat = drink.nutrients?.saturatedFatPer100g?.toFloat() ?: 0f
 
-            val showChart = chartStates[drink.id] == true
+            val showChart = chartStates[drink.createdAt] == true
 
             Card(
                 modifier = Modifier
@@ -170,15 +141,24 @@ fun ReportScreen(viewModel: ReportViewModel) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = drink.defaultName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
+                        // --- Start of Modified Section ---
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = drink.getSensibleName(), // Using the helper function
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            // This new Text composable displays the consumed amount
+                            Text(
+                                text = "Amount: ${drink.consumedAmount ?: 100} g/ml",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // --- End of Modified Section ---
 
                         // Action buttons row
                         Row {
@@ -199,7 +179,7 @@ fun ReportScreen(viewModel: ReportViewModel) {
                             // Chart toggle button
                             IconButton(
                                 onClick = {
-                                    chartStates[drink.id] = !(chartStates[drink.id] ?: false)
+                                    chartStates[drink.createdAt] = !(chartStates[drink.createdAt] ?: false)
                                 }
                             ) {
                                 Icon(
@@ -228,7 +208,7 @@ fun ReportScreen(viewModel: ReportViewModel) {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             NutrientItem(label = "Kalorien", value = "${kcal.toInt()} kcal")
-                            NutrientItem(label = "Zucker", value = "$sugar g")
+                            NutrientItem(label = "Zucker", value = "%.1fg".format(sugar))
                         }
 
                         Spacer(modifier = Modifier.height(4.dp))
@@ -237,8 +217,8 @@ fun ReportScreen(viewModel: ReportViewModel) {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            NutrientItem(label = "Koffein", value = "$caffeine g")
-                            NutrientItem(label = "Fett", value = "$fat g")
+                            NutrientItem(label = "Koffein", value = "%.1fg".format(caffeine))
+                            NutrientItem(label = "Fett", value = "%.1fg".format(fat))
                         }
                     }
                 }
