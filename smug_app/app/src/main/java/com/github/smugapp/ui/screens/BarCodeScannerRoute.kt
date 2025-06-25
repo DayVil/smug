@@ -1,6 +1,7 @@
 package com.github.smugapp.ui.screens
 
 import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,9 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -26,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import com.github.smugapp.data.SmugRepo
+import com.github.smugapp.model.DrinkProduct
 import com.github.smugapp.network.off.OffService
 import com.github.smugapp.network.off.SearchState
 import com.github.smugapp.network.off.parseInput
@@ -46,9 +51,14 @@ fun BarCodeScannerContent(repo: SmugRepo) {
     var productId by remember { mutableStateOf("") }
     var isScanning by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val client = remember { OffService(repo) }
+    val client = remember { OffService() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val uiState by client.searchState.collectAsState()
+
+    // --- Start of new code: State for confirmation dialog ---
+    var showConfirmationDialog by remember { mutableStateOf(false) }
+    var selectedProduct by remember { mutableStateOf<DrinkProduct?>(null) }
+    // --- End of new code ---
 
     DisposableEffect(Unit) {
         onDispose {
@@ -56,6 +66,41 @@ fun BarCodeScannerContent(repo: SmugRepo) {
             Log.d(TAG, "Client closed")
         }
     }
+
+    // --- Start of new code: Confirmation Dialog Composable ---
+    if (showConfirmationDialog && selectedProduct != null) {
+        AlertDialog(
+            onDismissRequest = { showConfirmationDialog = false },
+            title = { Text(text = "Add Drink") },
+            text = { Text(text = "Do you want to add '${selectedProduct!!.defaultName}' to your list?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        selectedProduct?.let { product ->
+                            scope.launch {
+                                repo.insertDrinkProduct(product)
+                            }
+                        }
+                        showConfirmationDialog = false
+                        selectedProduct = null // Reset selected product
+                    }
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showConfirmationDialog = false
+                        selectedProduct = null // Reset selected product
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+    // --- End of new code ---
 
     fun searchAction() {
         if (productId.isBlank()) {
@@ -123,7 +168,15 @@ fun BarCodeScannerContent(repo: SmugRepo) {
                             ) {
                                 LazyColumn {
                                     items(state.products.size) { index ->
-                                        OffCard(state.products[index])
+                                        val product = state.products[index]
+                                        // --- Start of modified code: Make OffCard clickable ---
+                                        Box(modifier = Modifier.clickable {
+                                            selectedProduct = product
+                                            showConfirmationDialog = true
+                                        }) {
+                                            OffCard(product)
+                                        }
+                                        // --- End of modified code ---
                                     }
                                 }
 

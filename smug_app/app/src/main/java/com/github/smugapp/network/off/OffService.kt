@@ -1,7 +1,6 @@
 package com.github.smugapp.network.off
 
 import android.util.Log
-import com.github.smugapp.data.SmugRepo
 import com.github.smugapp.model.DrinkProduct
 import com.github.smugapp.model.OffResponse
 import com.github.smugapp.model.OffSearchResponse
@@ -33,7 +32,8 @@ sealed interface SearchState {
     data class Error(val reason: String) : SearchState
 }
 
-class OffService(private val repo: SmugRepo) {
+// REMOVED: The SmugRepo dependency is gone. The service no longer interacts with the database.
+class OffService {
     private val urlOpenFoodFacts = "https://world.openfoodfacts.net/api/v2"
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
@@ -59,13 +59,12 @@ class OffService(private val repo: SmugRepo) {
         }
     }
 
+    // REFACTORED: This function now ONLY fetches from the network.
     private suspend fun fetchProductByBarCode(code: String): DrinkProduct? {
-        Log.d(TAG, "Fetching product by bar code: $code")
-        val product = repo.getDrinkProductById(code)
-        Log.d(TAG, "Fetched product: $product from database")
-        if (product != null) {
-            return product
-        }
+        Log.d(TAG, "Fetching product by bar code from network: $code")
+
+        // REMOVED: No more checking the local database here.
+        // val product = repo.getDrinkProductById(code) ...
 
         try {
             val response = fetchHttpProductRequest(code)
@@ -79,9 +78,12 @@ class OffService(private val repo: SmugRepo) {
                 return null
             }
 
-            repo.insertDrinkProduct(offResponse.product)
+            // REMOVED: The automatic insert is the key change. This line is gone.
+            // repo.insertDrinkProduct(offResponse.product)
+
             return offResponse.product
         } catch (e: Exception) {
+            Log.e(TAG, "Error fetching product by barcode", e)
             return null
         }
     }
@@ -99,6 +101,7 @@ class OffService(private val repo: SmugRepo) {
             }
         }
 
+    // This function is now "safe" because its helper `fetchProductByBarCode` no longer saves to the DB.
     private suspend fun fetchProductBySearchTerm(searchTerm: String): List<DrinkProduct> {
         Log.d(TAG, "Fetching product by search term: $searchTerm")
         if (searchTerm.isBlank()) {
@@ -117,7 +120,8 @@ class OffService(private val repo: SmugRepo) {
             _searchState.value = SearchState.Success(emptyList(), false)
 
             offResponse.products.forEach { productInfo ->
-                Log.d(TAG, "Fetching product by bar code: ${productInfo.code}")
+                Log.d(TAG, "Fetching full details for: ${productInfo.code}")
+                // This call no longer has the side effect of saving to the database.
                 val product = fetchProductByBarCode(productInfo.code)
                 if (product != null) {
                     products.add(product)
@@ -125,10 +129,10 @@ class OffService(private val repo: SmugRepo) {
                 }
             }
 
-            // Mark as complete
             _searchState.value = SearchState.Success(products.toList(), true)
             return products
         } catch (e: Exception) {
+            Log.e(TAG, "Error fetching by search term", e)
             return emptyList()
         }
     }
@@ -141,25 +145,21 @@ class OffService(private val repo: SmugRepo) {
             val products = when (searchTerm) {
                 is InputParser.BarCodeSearchTerm -> {
                     val product = fetchProductByBarCode(searchTerm.value)
-                    if (product != null) {
-                        listOf(product)
-                    } else {
-                        emptyList()
-                    }
+                    if (product != null) listOf(product) else emptyList()
                 }
-
                 is InputParser.ProductSearchTerm -> {
+                    // fetchProductBySearchTerm now updates the state internally.
                     fetchProductBySearchTerm(searchTerm.value)
-                    return
+                    return // Exit here as state is managed within the function.
                 }
-
                 is InputParser.UnknownSearchTerm -> emptyList()
             }
 
             _searchState.value = if (products.isNotEmpty()) {
                 SearchState.Success(products)
             } else {
-                SearchState.Error("No products found")
+                // Changed to a success state with an empty list to avoid showing an error.
+                SearchState.Success(emptyList(), isComplete = true)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error searching for product", e)
