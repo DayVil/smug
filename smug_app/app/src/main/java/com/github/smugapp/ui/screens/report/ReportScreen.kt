@@ -19,6 +19,9 @@ import com.github.smugapp.model.DrinkProduct
 import com.github.smugapp.ui.components.PieChart
 import com.github.smugapp.ui.components.SimpleBarChart
 import com.github.smugapp.ui.components.StackedBarChart
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.draw.clip
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -28,6 +31,8 @@ object ReportScreenRoute
 fun ReportScreen(viewModel: ReportViewModel) {
     var showWeekly by rememberSaveable { mutableStateOf(true) } // Initial state set to weekly
     var showCharts by rememberSaveable { mutableStateOf(false) }
+
+    var weeklyGoal by rememberSaveable { mutableStateOf("7000") } // Default to 7000 ml
 
     // Conditionally collect state based on the 'showWeekly' toggle
     val drinks by if (showWeekly) {
@@ -156,6 +161,17 @@ fun ReportScreen(viewModel: ReportViewModel) {
             Spacer(modifier = Modifier.height(12.dp))
         }
 
+        if (showWeekly) {
+            item {
+                WeeklyGoalSection(
+                    currentVolume = totalWeeklyVolume,
+                    goal = weeklyGoal,
+                    onGoalChange = { weeklyGoal = it }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+
         // Conditional content: show charts or the drink list
         if (showCharts) {
             item {
@@ -222,6 +238,63 @@ fun ReportScreen(viewModel: ReportViewModel) {
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+// --- NEW: Composable for the weekly goal section ---
+@Composable
+private fun WeeklyGoalSection(
+    currentVolume: Double,
+    goal: String,
+    onGoalChange: (String) -> Unit
+) {
+    val goalFloat = goal.toFloatOrNull() ?: 0f
+    val progress = if (goalFloat > 0) (currentVolume.toFloat() / goalFloat).coerceIn(0f, 1f) else 0f
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "Weekly Liquid Goal",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = goal,
+                    onValueChange = { newValue ->
+                        // Filter to allow only digits[4]
+                        onGoalChange(newValue.filter { it.isDigit() })
+                    },
+                    label = { Text("Goal (ml)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(6.dp))
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${currentVolume.toInt()} / ${goalFloat.toInt()} ml",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.align(Alignment.End),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
