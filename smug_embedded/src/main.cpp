@@ -2,11 +2,18 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+#include "HX711.h"
 
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
+// This works at least
+#define LOADCELL_DOUT_PIN 18 
+
+#define LOADCELL_SCK_PIN 19
+
 BLECharacteristic *pCharacteristic = NULL;
+HX711 scale;
 
 void setup()
 {
@@ -34,6 +41,9 @@ void setup()
     pAdvertising->setMinPreferred(0x12);
     BLEDevice::startAdvertising();
     Serial.println("Characteristic defined! Now you can read it in your phone!");
+
+
+    scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
 }
 
 void loop()
@@ -42,6 +52,14 @@ void loop()
     std::string newValue = std::to_string(value++);
     pCharacteristic->setValue(newValue);
     pCharacteristic->notify();
+
+    if (scale.is_ready()) {
+        long reading = scale.read();
+        Serial.print("HX711 reading: ");
+        Serial.println(reading);
+      } else {
+        Serial.println("HX711 not found.");
+      }
 
     delay(2000);
 }
