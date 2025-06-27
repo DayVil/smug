@@ -129,6 +129,7 @@ class OffService(private val repo: SmugRepo) {
             _searchState.value = SearchState.Success(products.toList(), true)
             return products
         } catch (e: Exception) {
+            Log.e(TAG, "Error searching for product", e)
             return emptyList()
         }
     }

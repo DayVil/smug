@@ -3,6 +3,8 @@ package com.github.smugapp.model
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.TypeConverter
+import io.ktor.http.Url
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -29,6 +31,9 @@ data class DrinkProduct(
     @SerialName("brands")
     val brands: String? = null,
 
+    @SerialName("image_front_small_url")
+    val image: Url? = null,
+
     @Embedded
     @SerialName("nutriments")
     val nutrients: Nutrients? = null,
@@ -38,5 +43,17 @@ data class DrinkProduct(
 ) {
     fun getSensibleName(): String {
         return germanName ?: englishName ?: frenchName ?: defaultName
+    }
+}
+
+class DrinkProductConverter {
+    @TypeConverter
+    fun fromUrl(url: Url?): String? {
+        return url?.toString()
+    }
+
+    @TypeConverter
+    fun toUrl(url: String?): Url? {
+        return url?.let { Url(it) }
     }
 }
