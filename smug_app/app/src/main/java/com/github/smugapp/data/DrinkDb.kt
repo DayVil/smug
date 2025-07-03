@@ -4,13 +4,17 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.github.smugapp.model.DrinkProduct
+import com.github.smugapp.model.DrinkProductConverter
 
 @Database(
     entities = [DrinkProduct::class],
     version = 5,
     exportSchema = false
 )
+
+@TypeConverters(DrinkProductConverter::class)
 abstract class DrinkDb : RoomDatabase() {
     abstract fun drinkDao(): DrinkDao
 
