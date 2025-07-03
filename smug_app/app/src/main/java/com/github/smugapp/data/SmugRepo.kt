@@ -44,6 +44,14 @@ class SmugRepo(private val drinkDao: DrinkDao, private val measurementDao: Measu
         measurementDao.deleteMeasurementById(id)
     }
 
+    suspend fun deleteDrinkProduct(drinkProduct: DrinkProduct) {
+        drinkDao.deleteDrinkProduct(drinkProduct)
+    }
+
+    suspend fun deleteAllDrinkProducts() {
+        drinkDao.deleteAllDrinkProducts()
+    }
+
     private fun pastOffset(monthAmount: Int) =
         System.currentTimeMillis() - monthAmount * 30L * 24 * 60 * 60 * 1000
 }

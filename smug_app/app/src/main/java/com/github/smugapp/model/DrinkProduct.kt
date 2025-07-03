@@ -7,12 +7,13 @@ import androidx.room.TypeConverter
 import io.ktor.http.Url
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
+// @Transient was removed from createdAt
+// PrimaryKey was moved from id to createdAt
 
 @Entity(tableName = "drink_products")
 @Serializable
 data class DrinkProduct(
-    @PrimaryKey
+    // The product's API ID is now a regular field, not the primary key.
     @SerialName("_id")
     val id: String,
 
@@ -38,8 +39,12 @@ data class DrinkProduct(
     @SerialName("nutriments")
     val nutrients: Nutrients? = null,
 
-    @Transient
+    // createdAt is now the PrimaryKey to ensure each log entry is unique.
+    @PrimaryKey
     val createdAt: Long = System.currentTimeMillis(),
+
+    // New field to store the amount consumed in grams or ml.
+    val consumedAmount: Int? = 100
 ) {
     fun getSensibleName(): String {
         return germanName ?: englishName ?: frenchName ?: defaultName
