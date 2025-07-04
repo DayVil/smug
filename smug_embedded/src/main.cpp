@@ -8,9 +8,9 @@
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
 // This works at least
-#define LOADCELL_DOUT_PIN 18 
+#define LOADCELL_DOUT_PIN 16
 
-#define LOADCELL_SCK_PIN 19
+#define LOADCELL_SCK_PIN 4
 
 BLECharacteristic *pCharacteristic = NULL;
 HX711 scale;
@@ -48,15 +48,16 @@ void setup()
 
 void loop()
 {
-    static int value = 0;
-    std::string newValue = std::to_string(value++);
-    pCharacteristic->setValue(newValue);
-    pCharacteristic->notify();
+    // static int value = 0;
+    // std::string newValue = std::to_string(value++);
 
     if (scale.is_ready()) {
         long reading = scale.read();
         Serial.print("HX711 reading: ");
         Serial.println(reading);
+        std::string strValue = std::to_string(reading);
+        pCharacteristic->setValue(strValue);
+        pCharacteristic->notify();
       } else {
         Serial.println("HX711 not found.");
       }
