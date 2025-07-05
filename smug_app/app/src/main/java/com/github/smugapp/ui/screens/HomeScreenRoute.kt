@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.github.smugapp.network.ConnectionState
 import com.github.smugapp.network.ble.BluetoothLEConnectionHandler
 import com.github.smugapp.network.ble.BluetoothLEDiscoveryHandler
+import com.github.smugapp.ui.components.ConnectionNotif
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -166,30 +167,9 @@ fun ConnectionScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(start = 20.dp, top = 16.dp, end = 20.dp)
         ) {
-            Text(text = "Weight: $weightState")
-            Text(text = "Connection State: $connectionState")
-
+            ConnectionNotif(connectionState)
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Show scanning status
-            when (connectionState) {
-                ConnectionState.DISCONNECTED -> {
-                    Text(text = "Scanning for weight scale...")
-                    Text(text = "Devices found: ${bleDevices.size}")
-                }
-
-                ConnectionState.CONNECTING -> {
-                    Text(text = "Connecting to weight scale...")
-                }
-
-                ConnectionState.CONNECTED -> {
-                    Text(text = "Connected to weight scale")
-                }
-
-                ConnectionState.DISCONNECTING -> {
-                    Text(text = "Disconnecting...")
-                }
-            }
+            Text(text = "Weight: $weightState")
         }
     }
 }
