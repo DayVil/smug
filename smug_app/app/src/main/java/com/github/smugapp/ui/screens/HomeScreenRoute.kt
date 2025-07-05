@@ -5,14 +5,10 @@ import android.bluetooth.BluetoothDevice
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.github.smugapp.network.ConnectionState
 import com.github.smugapp.network.ble.BluetoothLEConnectionHandler
 import com.github.smugapp.network.ble.BluetoothLEDiscoveryHandler
-import com.github.smugapp.ui.components.DeviceCard
+import com.github.smugapp.ui.components.ConnectionNotif
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -50,55 +46,114 @@ fun ConnectionScreenContent(
     val bleDevices by bluetoothLEDiscoveryHandler
         .discoveredDevices
         .collectAsState()
-    var selectedDevice: BluetoothDevice? by remember { mutableStateOf(null) }
+    var isConnecting by remember { mutableStateOf(false) }
 
     val connectionState by bluetoothLEConnectionHandler.connectionState.collectAsState()
     val discoveredServices by bluetoothLEConnectionHandler.discoveredServices.collectAsState()
 
-    LaunchedEffect(connectionState, discoveredServices) {
-        if (connectionState == ConnectionState.CONNECTED) {
-            Log.d(TAG, "Connected state detected")
+    // Automatically start scanning when component is first composed
+    LaunchedEffect(Unit) {
+        Log.d(TAG, "Starting automatic BLE scan for device with service $SERVICE_UUID")
+        bluetoothLEDiscoveryHandler.startScan()
+    }
 
-            if (discoveredServices.isEmpty()) {
-                Log.d(TAG, "No services discovered yet, ensuring discovery")
-                bluetoothLEConnectionHandler.ensureServicesDiscovered()
-                return@LaunchedEffect
+    // Automatically connect to device when discovered
+    LaunchedEffect(bleDevices, connectionState, isConnecting) {
+        if (connectionState == ConnectionState.DISCONNECTED && !isConnecting && bleDevices.isNotEmpty()) {
+            // Find the first BLE device that might be our target device
+            val targetDevice = bleDevices.firstOrNull { device ->
+                device.name != null && device.type == BluetoothDevice.DEVICE_TYPE_LE
             }
 
-            Log.d(TAG, "Discovered Services are available. Attempting to set notification.")
-            Log.d(TAG, "Discovered Services: ${discoveredServices.map { it.uuid }}")
-
-            val serviceExists = discoveredServices.any { it.uuid == SERVICE_UUID }
-            if (!serviceExists) {
-                Log.e(TAG, "Target service $SERVICE_UUID not found in discovered services")
-                return@LaunchedEffect
-            }
-
-            val success = bluetoothLEConnectionHandler.setCharacteristicNotification(
-                serviceUuid = SERVICE_UUID,
-                characteristicUuid = CHARACTERISTIC_UUID,
-                enable = true
-            ) {
+            if (targetDevice != null) {
                 Log.d(
                     TAG,
-                    "Received data: ${it.joinToString(", ") { String.format("%02X", it) }} " +
-                            "which translates into: ${String(it)}"
+                    "Found potential target device: ${targetDevice.name} (${targetDevice.address})"
                 )
-                val newWeight = String(it).toInt()
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    weightState = newWeight
+                Log.d(TAG, "Attempting to connect to device...")
+                isConnecting = true
+                bluetoothLEConnectionHandler.connect(targetDevice)
+            }
+        }
+    }
+
+    // Handle connection state changes and service discovery
+    LaunchedEffect(connectionState, discoveredServices) {
+        when (connectionState) {
+            ConnectionState.CONNECTED -> {
+                Log.d(TAG, "Connected to device")
+                isConnecting = false
+
+                if (discoveredServices.isEmpty()) {
+                    Log.d(TAG, "No services discovered yet, ensuring discovery")
+                    bluetoothLEConnectionHandler.ensureServicesDiscovered()
+                    return@LaunchedEffect
+                }
+
+                Log.d(TAG, "Discovered Services are available. Checking for target service.")
+                Log.d(TAG, "Discovered Services: ${discoveredServices.map { it.uuid }}")
+
+                val serviceExists = discoveredServices.any { it.uuid == SERVICE_UUID }
+                if (!serviceExists) {
+                    Log.w(
+                        TAG,
+                        "Target service $SERVICE_UUID not found. This device may not be the weight scale. Continuing scan..."
+                    )
+                    // Continue scanning for the correct device
+                    bluetoothLEDiscoveryHandler.startScan()
+                    return@LaunchedEffect
+                }
+
+                Log.d(TAG, "Target service found! Setting up characteristic notifications.")
+                val success = bluetoothLEConnectionHandler.setCharacteristicNotification(
+                    serviceUuid = SERVICE_UUID,
+                    characteristicUuid = CHARACTERISTIC_UUID,
+                    enable = true
+                ) { data ->
+                    Log.d(
+                        TAG,
+                        "Received weight data: ${
+                            data.joinToString(", ") {
+                                String.format(
+                                    "%02X",
+                                    it
+                                )
+                            }
+                        } " +
+                                "which translates to: ${String(data)}"
+                    )
+                    try {
+                        val newWeight = String(data).toInt()
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            weightState = newWeight
+                        }
+                    } catch (e: NumberFormatException) {
+                        Log.e(TAG, "Failed to parse weight data: ${String(data)}", e)
+                    }
+                }
+
+                if (success) {
+                    Log.d(TAG, "Successfully subscribed to weight notifications")
+                    // Stop scanning since we found and connected to our device
+                    bluetoothLEDiscoveryHandler.stopScan()
+                } else {
+                    Log.e(TAG, "Failed to subscribe to weight notifications")
                 }
             }
-            if (success) {
-                Log.d(
-                    "HomeScreen",
-                    "Successfully subscribed to notifications for $CHARACTERISTIC_UUID"
-                )
-            } else {
-                Log.e(
-                    "HomeScreen",
-                    "Failed to subscribe to notifications for $CHARACTERISTIC_UUID"
-                )
+
+            ConnectionState.DISCONNECTED -> {
+                Log.d(TAG, "Disconnected from device")
+                isConnecting = false
+                // Restart scanning when disconnected
+                bluetoothLEDiscoveryHandler.startScan()
+            }
+
+            ConnectionState.CONNECTING -> {
+                Log.d(TAG, "Connecting to device...")
+            }
+
+            ConnectionState.DISCONNECTING -> {
+                Log.d(TAG, "Disconnecting from device...")
             }
         }
     }
@@ -112,41 +167,9 @@ fun ConnectionScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(start = 20.dp, top = 16.dp, end = 20.dp)
         ) {
-            Text(text = "Weight: $weightState")
-            Text(text = "Connection State: $connectionState")
-
+            ConnectionNotif(connectionState)
             Spacer(modifier = Modifier.height(16.dp))
-
-            Row {
-                Button(
-                    onClick = { bluetoothLEDiscoveryHandler.startScan() },
-                    modifier = Modifier.padding(end = 8.dp)
-                ) { Text("Start BLE Scan") }
-
-                Button(
-                    onClick = { bluetoothLEDiscoveryHandler.stopScan() },
-                    modifier = Modifier.padding(end = 8.dp)
-                ) { Text("Stop BLE Scan") }
-            }
-
-            LazyColumn {
-                items(
-                    bleDevices
-                        .toList()
-                        .filter {
-                            it.name != null && it.type == BluetoothDevice.DEVICE_TYPE_LE
-                        }
-                )
-                { device ->
-                    DeviceCard(
-                        device = device,
-                        selectedDevice = selectedDevice,
-                    ) {
-                        selectedDevice = device
-                        bluetoothLEConnectionHandler.connect(device)
-                    }
-                }
-            }
+            Text(text = "Weight: $weightState")
         }
     }
 }
