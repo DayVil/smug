@@ -9,8 +9,9 @@
 
 // This works at least
 #define LOADCELL_DOUT_PIN 16
-
 #define LOADCELL_SCK_PIN 4
+
+#define LOADCELL_FACTOR 916
 
 BLECharacteristic *pCharacteristic = NULL;
 HX711 scale;
@@ -44,6 +45,8 @@ void setup()
 
 
     scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+    scale.set_scale(LOADCELL_FACTOR);
+    scale.tare();
 }
 
 void loop()
@@ -52,7 +55,7 @@ void loop()
     // std::string newValue = std::to_string(value++);
 
     if (scale.is_ready()) {
-        long reading = scale.read();
+        long reading = scale.get_units();
         Serial.print("HX711 reading: ");
         Serial.println(reading);
         std::string strValue = std::to_string(reading);
