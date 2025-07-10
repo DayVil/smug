@@ -29,10 +29,10 @@ fun ScannerSearchBox(
     OutlinedTextField(
         value = productId,
         onValueChange = setProductId,
-        label = { Text("Product ID") },
+        label = { Text("Product ID or Name") },
         singleLine = true,
         keyboardOptions = KeyboardOptions.Default.copy(
-            keyboardType = KeyboardType.Number,
+            keyboardType = KeyboardType.Text,
             imeAction = ImeAction.Search
         ),
         keyboardActions = KeyboardActions(

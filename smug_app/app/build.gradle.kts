@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.okhttp)
 
     implementation(libs.play.services.mlkit.barcode.scanning)
 
@@ -80,6 +81,10 @@ dependencies {
     implementation(libs.camerax.video)
     implementation(libs.camerax.view)
     implementation(libs.camerax.extensions)
+
+//    implementation("com.google.ai.client.generativeai:generativeai:1.1.0")
+    implementation("dev.shreyaspatil.generativeai:generativeai-google:0.9.0-1.1.0")
+//    implementation("com.google.accompanist:accompanist-markdown:0.28.0")
 
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
