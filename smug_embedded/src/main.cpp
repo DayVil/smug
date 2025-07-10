@@ -9,10 +9,9 @@
 
 // This works at least
 #define LOADCELL_DOUT_PIN 16
-
 #define LOADCELL_SCK_PIN 4
 
-#define LOADCELL_FACTOR -918
+#define LOADCELL_FACTOR 916
 
 BLECharacteristic *pCharacteristic = NULL;
 HX711 scale;

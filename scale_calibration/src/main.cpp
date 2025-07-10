@@ -17,6 +17,7 @@
 // HX711 circuit wiring
 const int LOADCELL_DOUT_PIN = 16;
 const int LOADCELL_SCK_PIN = 4;
+const int KNOWN_WEIGHT = 37;
 
 HX711 scale;
 
@@ -42,6 +43,10 @@ void loop() {
     long reading = scale.get_units(10);
     Serial.print("Result: ");
     Serial.println(reading);
+
+    Serial.print("Factor: ");
+    const float factor = reading / KNOWN_WEIGHT;
+    Serial.println(factor);
   } 
   else {
     Serial.println("HX711 not found.");
