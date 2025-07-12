@@ -69,6 +69,9 @@ class MainContent(
                         composable<BarCodeScannerRoute> {
                             BarCodeScannerContent(repo, bluetoothLEDiscoveryHandler, bluetoothLEConnectionHandler)
                         }
+//                        composable<BarCodeScannerRoute> {
+//                            ConnectionScreenContent(bluetoothLEDiscoveryHandler, bluetoothLEConnectionHandler)
+//                        }
                         composable<ReportScreenRoute> {
                             ReportScreen(reportViewModel)
                         }

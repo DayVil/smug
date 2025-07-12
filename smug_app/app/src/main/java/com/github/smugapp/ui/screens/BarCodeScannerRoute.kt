@@ -21,7 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -61,7 +61,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.UUID
-import kotlin.math.abs
 import kotlin.random.Random
 
 private const val TAG = "ScannerAndWeightScreen"
@@ -83,8 +82,11 @@ fun BarCodeScannerContent(
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
 
+    // State for the actual sensor value
     var rawWeight by remember { mutableIntStateOf(0) }
+    // State for the tare offset - load from SharedPreferences but manage as simple state
     var zeroOffset by remember { mutableIntStateOf(sharedPrefs.getInt(KEY_ZERO_OFFSET, 0)) }
+    // The final weight to display, calculated after applying the zero offset
     val weightState = rawWeight - zeroOffset
 
     val bleDevices by bluetoothLEDiscoveryHandler.discoveredDevices.collectAsState()
@@ -102,59 +104,79 @@ fun BarCodeScannerContent(
     var selectedProduct by remember { mutableStateOf<DrinkProduct?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) { bluetoothLEDiscoveryHandler.startScan() }
+    // Automatically start scanning when component is first composed
+    LaunchedEffect(Unit) {
+        Log.d(TAG, "Starting automatic BLE scan for device with service $SERVICE_UUID")
+        bluetoothLEDiscoveryHandler.startScan()
+    }
 
+    // Automatically connect to device when discovered
     LaunchedEffect(bleDevices, connectionState, isConnecting) {
         if (connectionState == ConnectionState.DISCONNECTED && !isConnecting && bleDevices.isNotEmpty()) {
-            val targetDevice = bleDevices.firstOrNull { it.name != null && it.type == BluetoothDevice.DEVICE_TYPE_LE }
+            val targetDevice = bleDevices.firstOrNull { device ->
+                device.name != null && device.type == BluetoothDevice.DEVICE_TYPE_LE
+            }
             if (targetDevice != null) {
+                Log.d(
+                    TAG,
+                    "Found potential target device: ${targetDevice.name} (${targetDevice.address})"
+                )
                 isConnecting = true
                 bluetoothLEConnectionHandler.connect(targetDevice)
             }
         }
     }
 
+    // Handle connection state changes and service discovery
     LaunchedEffect(connectionState, discoveredServices) {
-        if (connectionState == ConnectionState.CONNECTED) {
-            isConnecting = false
-            if (discoveredServices.isEmpty()) {
-                bluetoothLEConnectionHandler.ensureServicesDiscovered()
-                return@LaunchedEffect
-            }
-            if (!discoveredServices.any { it.uuid == SERVICE_UUID }) {
-                bluetoothLEDiscoveryHandler.startScan()
-                return@LaunchedEffect
-            }
-            val success = bluetoothLEConnectionHandler.setCharacteristicNotification(
-                serviceUuid = SERVICE_UUID,
-                characteristicUuid = CHARACTERISTIC_UUID,
-                enable = true
-            ) { data ->
-                try {
-                    val weightInMilliGrams = String(data).toInt()
-                    val weightInGrams = (weightInMilliGrams *(-1)) / 1000
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        rawWeight = weightInGrams
+        when (connectionState) {
+            ConnectionState.CONNECTED -> {
+                Log.d(TAG, "Connected to device")
+                isConnecting = false
+                if (discoveredServices.isEmpty()) {
+                    bluetoothLEConnectionHandler.ensureServicesDiscovered()
+                    return@LaunchedEffect
+                }
+                val serviceExists = discoveredServices.any { it.uuid == SERVICE_UUID }
+                if (!serviceExists) {
+                    Log.w(TAG, "Target service $SERVICE_UUID not found. Continuing scan...")
+                    bluetoothLEDiscoveryHandler.startScan()
+                    return@LaunchedEffect
+                }
+                Log.d(TAG, "Target service found! Setting up characteristic notifications.")
+                val success = bluetoothLEConnectionHandler.setCharacteristicNotification(
+                    serviceUuid = SERVICE_UUID,
+                    characteristicUuid = CHARACTERISTIC_UUID,
+                    enable = true
+                ) { data ->
+                    Log.d(TAG, "Received weight data: ${String(data)}")
+                    try {
+                        val newWeight = String(data).toInt()
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            // Update the raw weight from the sensor
+                            rawWeight = newWeight
+                        }
+                    } catch (e: NumberFormatException) {
+                        Log.e(TAG, "Failed to parse weight data: ${String(data)}", e)
                     }
-                } catch (e: NumberFormatException) {
-                    Log.e(TAG, "Failed to parse weight data: ${String(data)}", e)
+                }
+                if (success) {
+                    Log.d(TAG, "Successfully subscribed to weight notifications")
+                    bluetoothLEDiscoveryHandler.stopScan()
+                } else {
+                    Log.e(TAG, "Failed to subscribe to weight notifications")
                 }
             }
-            if (success) bluetoothLEDiscoveryHandler.stopScan()
-        } else if (connectionState == ConnectionState.DISCONNECTED) {
-            isConnecting = false
-            bluetoothLEDiscoveryHandler.startScan()
-        }
-    }
 
-    LaunchedEffect(connectionState) {
-        val message = when (connectionState) {
-            ConnectionState.CONNECTING -> "Connecting to scale..."
-            ConnectionState.CONNECTED -> "Scale connected"
-            ConnectionState.DISCONNECTED -> "Scale disconnected. Searching..."
-            ConnectionState.DISCONNECTING -> "Disconnecting from scale..."
+            ConnectionState.DISCONNECTED -> {
+                Log.d(TAG, "Disconnected from device")
+                isConnecting = false
+                bluetoothLEDiscoveryHandler.startScan()
+            }
+
+            else -> { /* Handle other states if necessary */
+            }
         }
-        scope.launch { snackbarHostState.showSnackbar(message) }
     }
 
     DisposableEffect(Unit) { onDispose { client.close() } }
@@ -253,18 +275,22 @@ fun BarCodeScannerContent(
                             Text(text = "Weight: $weightState g", color = Color.White)
                             Spacer(modifier = Modifier.width(16.dp))
                             Button(onClick = {
-                                val newOffset = rawWeight
-                                sharedPrefs.edit().putInt(KEY_ZERO_OFFSET, newOffset).apply()
-                                zeroOffset = newOffset
+                                // Set the current raw weight as the offset
+                                zeroOffset = rawWeight
+                                // Save to SharedPreferences
+                                sharedPrefs.edit().putInt(KEY_ZERO_OFFSET, rawWeight).apply()
                             }) { Text("Zero") }
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { rawWeight = Random.nextInt(50, 500) }) {
+                    Button(onClick = {
+                        // Update raw weight with a new random value to simulate a change
+                        rawWeight = Random.nextInt(50, 500)
+                    }) {
                         Text("Simulate Weight")
                     }
                     Spacer(modifier = Modifier.height(24.dp))
-                    Divider()
+                    HorizontalDivider()
                     Spacer(modifier = Modifier.height(24.dp))
                     ScannerSearchBox(
                         productId = productId,
