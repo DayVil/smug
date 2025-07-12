@@ -10,7 +10,7 @@ import com.github.smugapp.model.DrinkProductConverter
 
 @Database(
     entities = [DrinkProduct::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 

@@ -1,18 +1,35 @@
 package com.github.smugapp.ui.screens.report
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.smugapp.data.SmugRepo
 import com.github.smugapp.model.DrinkProduct
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import com.github.smugapp.network.GeminiApiService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-class ReportViewModel(private val repo: SmugRepo) : ViewModel() {
+// (InsightsState sealed class remains the same)
+sealed class InsightsState {
+    object Idle : InsightsState()
+    object Loading : InsightsState()
+    data class Success(val text: String) : InsightsState()
+    data class Error(val message: String) : InsightsState()
+}
+
+
+class ReportViewModel(
+    private val repo: SmugRepo,
+    private val geminiService: GeminiApiService
+) : ViewModel() {
+
+    // (Your existing StateFlows and other code remain the same)
+    private val _insightsState = MutableStateFlow<InsightsState>(InsightsState.Idle)
+    val insightsState: StateFlow<InsightsState> = _insightsState.asStateFlow()
+
     private val _todayDrinks = repo.getTodayDrinkProducts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
     val todayDrinks: StateFlow<List<DrinkProduct>> = _todayDrinks
@@ -31,13 +48,10 @@ class ReportViewModel(private val repo: SmugRepo) : ViewModel() {
         .map { drinks -> drinks.sumOf { it.nutrients?.caloriesPer100g ?: 0.0 } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0.0)
 
-    // --- NEW: Added total weekly volume calculation ---
     val totalWeeklyVolume: StateFlow<Double> = _weeklyDrinks
         .map { drinks -> drinks.sumOf { (it.consumedAmount ?: 0).toDouble() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0.0)
-    // --- End of new code ---
 
-    // Aggregated data for charts
     val volumeByType: StateFlow<Map<String, Double>> = _weeklyDrinks
         .map { drinks -> aggregateVolumeByType(drinks) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyMap())
@@ -57,6 +71,97 @@ class ReportViewModel(private val repo: SmugRepo) : ViewModel() {
     val dailyWaterIntake: StateFlow<Map<String, Double>> = _weeklyDrinks
         .map { drinks -> aggregateDailyWaterIntake(drinks) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyMap())
+
+    val totalDailyVolume: StateFlow<Double> = _todayDrinks
+        .map { drinks -> drinks.sumOf { (it.consumedAmount ?: 0).toDouble() } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0.0)
+
+    // --- START OF FIX ---
+    fun updateDrinkAmount(drink: DrinkProduct, newAmount: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val oldAmount = drink.consumedAmount ?: 100
+            // Avoid division by zero if the old amount was somehow 0
+            if (oldAmount == 0) return@launch
+
+            // Calculate the factor to scale the nutrients by
+            val scaleFactor = newAmount.toDouble() / oldAmount.toDouble()
+
+            // Apply the scaling factor to the existing nutrient values
+            val updatedNutrients = drink.nutrients?.copy(
+                caloriesPer100g = (drink.nutrients.caloriesPer100g ?: 0.0) * scaleFactor,
+                sugarsPer100g = (drink.nutrients.sugarsPer100g ?: 0.0) * scaleFactor,
+                caffeinePer100g = (drink.nutrients.caffeinePer100g ?: 0.0) * scaleFactor,
+                saturatedFatPer100g = (drink.nutrients.saturatedFatPer100g ?: 0.0) * scaleFactor
+            )
+
+            // Create the final updated drink object with both new amount and new nutrients
+            val updatedDrink = drink.copy(
+                consumedAmount = newAmount,
+                nutrients = updatedNutrients
+            )
+
+            // Save the fully updated object to the database
+            repo.updateDrinkProduct(updatedDrink)
+        }
+    }
+    // --- END OF FIX ---
+
+
+    fun getDrinkingInsights() {
+        viewModelScope.launch {
+            _insightsState.value = InsightsState.Loading
+
+            val apiKey = "" // Replace with your key
+            if (apiKey.isBlank()) {
+                _insightsState.value = InsightsState.Error("API Key not set.")
+                return@launch
+            }
+
+            val weeklyVolume = totalWeeklyVolume.first()
+            val weeklyCals = weeklyCalories.first()
+            val volByType = volumeByType.first()
+            val calByType = caloriesByType.first()
+            val dailyVols = dailyVolumeByType.first()
+
+            val prompt = """
+                Based on my weekly drinking data, provide a summary of my habits and offer actionable,
+                healthy advice for improvement. Focus on the importance of enough water intake, 
+                generally fewer calories, and how healthy different drinks are. 
+                Keep the tone straightforward and concise.
+
+                - My total consumption this week was: ${weeklyVolume.toInt()} ml.
+                - My total calories from drinks this week were: ${weeklyCals.toInt()} kcal.
+
+                Breakdown by Drink Type (Volume):
+                ${volByType.map { "- ${it.key}: ${it.value.toInt()} ml" }.joinToString("\n")}
+
+                Breakdown by Drink Type (Calories):
+                ${calByType.map { "- ${it.key}: ${it.value.toInt()} kcal" }.joinToString("\n")}
+
+                Daily Consumption Pattern (Volume):
+                ${dailyVols.map { (day, types) -> "- $day: ${types.values.sum().toInt()} ml" }.joinToString("\n")}
+
+                Please analyze this and give me some personalized insights using the following template:
+                
+                **Summary**: ...
+                **Healthy Advice**: ...
+            """.trimIndent()
+
+            Log.d("ReportViewModel", "Generated Prompt:\n$prompt")
+
+            val result = geminiService.getInsights(prompt, apiKey)
+
+            result.onSuccess { insightText ->
+                _insightsState.value = InsightsState.Success(insightText)
+            }.onFailure { error ->
+                _insightsState.value = InsightsState.Error(error.message ?: "An unknown error occurred.")
+            }
+        }
+    }
+
+    fun resetInsightsState() {
+        _insightsState.value = InsightsState.Idle
+    }
 
     fun deleteDrinkProduct(drinkProduct: DrinkProduct) {
         viewModelScope.launch {
@@ -114,7 +219,7 @@ class ReportViewModel(private val repo: SmugRepo) : ViewModel() {
     }
 
     private fun aggregateDailyWaterIntake(drinks: List<DrinkProduct>): Map<String, Double> {
-        return drinks.filter { it.getSensibleName().lowercase().contains("water") }
+        return drinks.filter { it.getSensibleName().lowercase(Locale.ROOT).contains("water") }
             .groupBy { toDateString(it.createdAt) }
             .mapValues { (_, waterDrinks) ->
                 waterDrinks.sumOf { (it.consumedAmount ?: 100).toDouble() }

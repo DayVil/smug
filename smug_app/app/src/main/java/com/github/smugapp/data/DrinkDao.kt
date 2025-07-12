@@ -36,6 +36,7 @@ interface DrinkDao {
                 "WHERE id = :id AND createdAt >= :timestampThreshold " +
                 "ORDER BY createdAt DESC"
     )
+
     suspend fun getDrinkProductById(id: String, timestampThreshold: Long): DrinkProduct?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
