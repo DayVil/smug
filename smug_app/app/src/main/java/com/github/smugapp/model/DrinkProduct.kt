@@ -32,6 +32,18 @@ data class DrinkProduct(
     @SerialName("brands")
     val brands: String? = null,
 
+    @SerialName("categories_tags")
+    val categoryTags: List<String>? = null,
+
+    @SerialName("pnns_groups_2")
+    val pnnsGroup: String? = null,
+
+    @SerialName("food_groups_tags")
+    val foodGroups: List<String>? = null,
+
+    @SerialName("ingredients_tags")
+    val ingredients: List<String>? = null,
+
     @SerialName("image_front_small_url")
     val image: Url? = null,
 
@@ -52,6 +64,8 @@ data class DrinkProduct(
 }
 
 class DrinkProductConverter {
+
+    // -- Url converters --
     @TypeConverter
     fun fromUrl(url: Url?): String? {
         return url?.toString()
@@ -61,4 +75,19 @@ class DrinkProductConverter {
     fun toUrl(url: String?): Url? {
         return url?.let { Url(it) }
     }
+
 }
+
+class ListConverter {
+
+    @TypeConverter
+    fun fromList(list: List<String>?): String? {
+        return list?.joinToString(",")
+    }
+
+    @TypeConverter
+    fun toList(data: String?): List<String>? {
+        return data?.split(",")?.map { it.trim() }
+    }
+}
+

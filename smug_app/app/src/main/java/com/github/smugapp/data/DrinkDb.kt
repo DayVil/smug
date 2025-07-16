@@ -7,14 +7,16 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.github.smugapp.model.DrinkProduct
 import com.github.smugapp.model.DrinkProductConverter
+import com.github.smugapp.model.ListConverter
+
 
 @Database(
     entities = [DrinkProduct::class],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 
-@TypeConverters(DrinkProductConverter::class)
+@TypeConverters(DrinkProductConverter::class, ListConverter::class)
 abstract class DrinkDb : RoomDatabase() {
     abstract fun drinkDao(): DrinkDao
 
@@ -29,7 +31,7 @@ abstract class DrinkDb : RoomDatabase() {
                     DrinkDb::class.java,
                     "drink_database"
                 )
-                    .fallbackToDestructiveMigration(false)
+                    .fallbackToDestructiveMigration(true)
                     .build()
                 INSTANCE = instance
                 instance

@@ -28,6 +28,7 @@ import com.github.smugapp.model.DrinkProduct
 import com.github.smugapp.ui.components.PieChart
 import com.github.smugapp.ui.components.SimpleBarChart
 import com.github.smugapp.ui.components.StackedBarChart
+import com.github.smugapp.ui.theme.BlueWater
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -171,7 +172,7 @@ fun ReportScreen(viewModel: ReportViewModel) {
             item { ChartCard(title = "Calories Distribution (Total: ${totalCalories.toInt()} kcal)") { PieChart(data = caloriesByType) } }
             item { ChartCard(title = "Daily Volume by Type (Total: ${totalWeeklyVolume.toInt()} ml)") { StackedBarChart(data = dailyVolumeByType, yAxisUnit = "ml") } }
             item { ChartCard(title = "Daily Calories by Type (Total: ${totalCalories.toInt()} kcal)") { StackedBarChart(data = dailyCaloriesByType, yAxisUnit = "kcal") } }
-            item { ChartCard(title = "Daily Water Intake") { SimpleBarChart(data = dailyWaterIntake, color = MaterialTheme.colorScheme.secondary) } }
+            item { ChartCard(title = "Daily Water Intake") { SimpleBarChart(data = dailyWaterIntake, color = BlueWater) } }
         } else {
             items(drinks, key = { it.createdAt }) { drink ->
                 DrinkItemCard(
@@ -299,12 +300,11 @@ private fun DrinkItemCard(drink: DrinkProduct, onDelete: (DrinkProduct) -> Unit,
             }
             Spacer(modifier = Modifier.height(8.dp))
             if (isChartVisible) {
-                NutrientChart(mapOf("Kalorien" to kcal, "Zucker" to sugar, "Koffein" to caffeine))
+                NutrientChart(mapOf("Kalorien" to kcal, "Zucker" to sugar))
             } else {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                     NutrientItem("Kalorien", "${kcal.toInt()} kcal")
                     NutrientItem("Zucker", "%.1fg".format(sugar))
-                    NutrientItem("Koffein", "%.1fg".format(caffeine))
                 }
             }
         }
@@ -322,13 +322,18 @@ fun NutrientItem(label: String, value: String) {
 @Composable
 fun NutrientChart(nutrients: Map<String, Float>) {
     val max = nutrients.values.maxOrNull()?.takeIf { it > 0f } ?: 1f
-    Row(modifier = Modifier.fillMaxWidth().height(150.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Bottom) {
+    Row(modifier = Modifier.fillMaxWidth().height(160.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Bottom) {
         nutrients.forEach { (label, value) ->
             if (value > 0) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom, modifier = Modifier.weight(1f)) {
-                    Text("%.1f".format(value), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom, modifier = Modifier.weight(1f).padding(horizontal = 4.dp)) {
+                    Text("%.1f".format(value),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip)
                     Spacer(modifier = Modifier.height(2.dp))
-                    Box(modifier = Modifier.width(40.dp).height(120.dp * (value / max)).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp, 6.dp)))
+                    Box(modifier = Modifier.width(40.dp).height(100.dp * (value / max)).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp, 6.dp)))
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }

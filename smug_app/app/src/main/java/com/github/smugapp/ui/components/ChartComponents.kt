@@ -17,6 +17,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
+
+
 
 @Composable
 fun PieChart(
@@ -220,25 +226,44 @@ fun StackedBarChart(
         }
 
         // Legend
-        LazyRow(
-            modifier = Modifier.padding(start = 56.dp, end = 16.dp, top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        // Legend (multi-row, always shows all types with correct colors)
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
         ) {
-            items(allTypes) { type ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .background(
-                                colors[allTypes.indexOf(type) % colors.size],
-                                RoundedCornerShape(2.dp)
+            allTypes.chunked(2).forEach { rowItems ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    rowItems.forEach { type ->
+                        val colorIndex = allTypes.indexOf(type) % colors.size
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(CircleShape)
+                                    .background(colors[colorIndex])
+                                    .border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
                             )
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = type,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = type,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -255,40 +280,69 @@ fun SimpleBarChart(
     if (data.isEmpty()) return
 
     val maxValue = data.values.maxOrNull() ?: 1.0
+    val yAxisLabelsCount = 4
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(200.dp)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.Bottom
     ) {
-        data.entries.forEach { (day, value) ->
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                val height = (value / maxValue * 160).dp
-                Box(
-                    modifier = Modifier
-                        .width(40.dp)
-                        .height(height)
-                        .background(color, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+        // Y-axis labels
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(40.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.End
+        ) {
+            (yAxisLabelsCount downTo 0).forEach { i ->
+                val value = maxValue / yAxisLabelsCount * i
                 Text(
-                    text = day,
+                    text = value.toInt().toString(),
                     fontSize = 10.sp,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "${value.toInt()}ml",
-                    fontSize = 8.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Bars
+        Row(
+            modifier = Modifier
+                .fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            data.entries.forEach { (day, value) ->
+                Column(
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    val height = (value / maxValue * 160).dp
+                    Box(
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(height)
+                            .background(color, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = day,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }
+
 
