@@ -180,15 +180,101 @@ class ReportViewModel(
         return formatter.format(Date(timestamp))
     }
 
+    private fun getUnifiedDrinkName(name: String,
+                                    categoryTags: List<String>? = null,
+                                    pnnsGroup: String? = null,
+                                    foodGroups: List<String>? = null,
+                                    ingredients: List<String>? = null
+    ): String {
+        val lower = name.lowercase(Locale.ROOT)
+
+        val looksLikeWater = listOf(
+            "water", "wasser", "mineral", "quelle", "sidi", "eau", "ain", "saiss", "naturelle"
+        ).any { lower.contains(it) }
+
+        val explicitlyNotWater = listOf("tea", "coffee", "kaffee", "latte").any { lower.contains(it) }
+
+        val categoryMatch = categoryTags?.any {
+            it.contains("water", ignoreCase = true) || it.contains("mineral", ignoreCase = true)
+        } ?: false
+
+        val pnnsMatch = pnnsGroup?.contains("waters", ignoreCase = true) == true
+
+        val foodGroupMatch = foodGroups?.any {
+            it.contains("water", ignoreCase = true)
+        } ?: false
+
+        val ingredientMatch = ingredients?.any {
+            it.contains("water", ignoreCase = true)
+        } ?: false
+
+        return if ((looksLikeWater || categoryMatch || pnnsMatch || foodGroupMatch || ingredientMatch) && !explicitlyNotWater) {
+            "Water"
+        } else name
+    }
+
+    private fun getDrinkCategory(drink: DrinkProduct): String {
+        val unifiedName = getUnifiedDrinkName(
+            name = drink.getSensibleName(),
+            categoryTags = drink.categoryTags,
+            pnnsGroup = drink.pnnsGroup,
+            foodGroups = drink.foodGroups,
+            ingredients = drink.ingredients
+        ).lowercase(Locale.ROOT)
+
+        if (unifiedName == "water") return "Water"
+
+        val categories = drink.categoryTags?.joinToString(",")?.lowercase(Locale.ROOT) ?: ""
+        val ingredients = drink.ingredients?.joinToString(",")?.lowercase(Locale.ROOT) ?: ""
+        val cal = drink.nutrients?.caloriesPer100g ?: 0.0
+        val caf = drink.nutrients?.caffeinePer100g ?: 0.0
+        val catTags = drink.categoryTags ?: emptyList()
+        val pnns = drink.pnnsGroup?.lowercase(Locale.ROOT) ?: ""
+        val foodGroups = drink.foodGroups ?: emptyList()
+
+        return when {
+            unifiedName.contains("coffee") || unifiedName.contains("kaffee") ||
+                    unifiedName.contains("espresso") || unifiedName.contains("macchiato") || unifiedName.contains("latte") ||
+                    catTags.any { it.contains("coffee") } -> "Coffee"
+
+            unifiedName.contains("tea") || unifiedName.contains("tee") ||
+                    categories.contains("tea") || catTags.any { it.contains("tea") } -> "Tea"
+
+            unifiedName.contains("juice") || unifiedName.contains("cappy") ||
+                    categories.contains("juice") || categories.contains("nectar") || categories.contains("smoothie") ||
+                    catTags.any { it.contains("juice") || it.contains("nectar") } || pnns.contains("fruit juices") -> "Juice"
+
+            categories.contains("soft drinks") || categories.contains("sugary drinks") ||
+                    catTags.any { it.contains("soft-drinks") || it.contains("sugary") } ||
+                    (cal > 20 && ingredients.contains("sugar")) -> "Sugary Drinks"
+
+            unifiedName.contains("milch") || unifiedName.contains("milk") ||
+                    categories.contains("milk") || ingredients.contains("milk") ||
+                    foodGroups.any { it.contains("milk") } -> "Milk-Based Drinks"
+
+            ingredients.contains("soja") || ingredients.contains("almond") || ingredients.contains("oat") ||
+                    categories.contains("plant-based") || catTags.any { it.contains("plant-based") } -> "Plant-Based Drinks"
+
+            categories.contains("energy drinks") || catTags.any { it.contains("energy-drinks") } || caf > 10.0 -> "Energy Drinks"
+
+            categories.contains("sports drinks") || unifiedName.contains("isotonic") || catTags.any { it.contains("sports-drinks") } -> "Sports Drinks"
+
+            categories.contains("alcohol") || catTags.any { it.contains("alcohol") } ||
+                    unifiedName.contains("bier") || unifiedName.contains("wein") || unifiedName.contains("wine") -> "Alcoholic Drinks"
+
+            else -> "Other"
+        }
+    }
+
     private fun aggregateVolumeByType(drinks: List<DrinkProduct>): Map<String, Double> {
-        return drinks.groupBy { it.getSensibleName() }
+        return drinks.groupBy { getDrinkCategory(it) }
             .mapValues { (_, drinkList) ->
                 drinkList.sumOf { (it.consumedAmount ?: 100).toDouble() }
             }
     }
 
     private fun aggregateCaloriesByType(drinks: List<DrinkProduct>): Map<String, Double> {
-        return drinks.groupBy { it.getSensibleName() }
+        return drinks.groupBy { getDrinkCategory(it) }
             .mapValues { (_, drinkList) ->
                 drinkList.sumOf { drink ->
                     drink.nutrients?.caloriesPer100g ?: 0.0
@@ -199,7 +285,7 @@ class ReportViewModel(
     private fun aggregateDailyVolumeByType(drinks: List<DrinkProduct>): Map<String, Map<String, Double>> {
         return drinks.groupBy { toDateString(it.createdAt) }
             .mapValues { (_, dailyDrinks) ->
-                dailyDrinks.groupBy { it.getSensibleName() }
+                dailyDrinks.groupBy { getDrinkCategory(it) }
                     .mapValues { (_, drinkList) ->
                         drinkList.sumOf { (it.consumedAmount ?: 100).toDouble() }
                     }
@@ -209,7 +295,7 @@ class ReportViewModel(
     private fun aggregateDailyCaloriesByType(drinks: List<DrinkProduct>): Map<String, Map<String, Double>> {
         return drinks.groupBy { toDateString(it.createdAt) }
             .mapValues { (_, dailyDrinks) ->
-                dailyDrinks.groupBy { it.getSensibleName() }
+                dailyDrinks.groupBy { getDrinkCategory(it) }
                     .mapValues { (_, drinkList) ->
                         drinkList.sumOf { drink ->
                             drink.nutrients?.caloriesPer100g ?: 0.0
@@ -219,7 +305,21 @@ class ReportViewModel(
     }
 
     private fun aggregateDailyWaterIntake(drinks: List<DrinkProduct>): Map<String, Double> {
-        return drinks.filter { it.getSensibleName().lowercase(Locale.ROOT).contains("water") }
+        return drinks.filter { drink ->
+            val name = drink.getSensibleName().lowercase(Locale.ROOT)
+
+            val isNameLikeWater = name.contains("water") || name.contains("wasser")
+            val isExplicitlyNotWater = name.contains("tea") || name.contains("tee") || name.contains("coffee") || name.contains("kaffee")
+
+            val isZeroNutrient = drink.nutrients?.let {
+                (it.caloriesPer100g ?: 0.0) == 0.0 &&
+                        (it.sugarsPer100g ?: 0.0) == 0.0 &&
+                        (it.saturatedFatPer100g ?: 0.0) == 0.0 &&
+                        (it.caffeinePer100g ?: 0.0) == 0.0
+
+            } ?: false
+
+            (isNameLikeWater || isZeroNutrient) && !isExplicitlyNotWater }
             .groupBy { toDateString(it.createdAt) }
             .mapValues { (_, waterDrinks) ->
                 waterDrinks.sumOf { (it.consumedAmount ?: 100).toDouble() }

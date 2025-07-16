@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 
+
 const val TAG = "OffService"
 
 sealed interface SearchState {
@@ -68,12 +69,12 @@ class OffService {
 
         try {
             val response = fetchHttpProductRequest(code)
-
             if (response.status.value != 200) {
                 return null
             }
-
             val offResponse = response.body<OffResponse>()
+            val caffeine = offResponse.product.nutrients?.caffeinePer100g
+            Log.d(TAG, "💥 Caffeine per 100g: $caffeine")
             if (offResponse.status != 1) {
                 return null
             }

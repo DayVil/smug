@@ -51,7 +51,6 @@ fun OffCard(product: DrinkProduct) {
                     Text(text = "Calories: ${product.nutrients?.caloriesPer100g ?: 0} kcal")
                     Text(text = "Fat: ${product.nutrients?.saturatedFatPer100g ?: 0} g")
                     Text(text = "Sugars: ${product.nutrients?.sugarsPer100g ?: 0} g")
-                    Text(text = "Caffeine: ${product.nutrients?.caffeinePer100g ?: 0} mg")
                 }
             }
         }
