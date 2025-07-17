@@ -1,7 +1,5 @@
 # Smug
 
-- Link to HCI-Wiki: <https://wiki.hci.uni-hannover.de/doku.php?id=teaching:s25:pcl:g4>
-
 Smug, short for **Smart Mug**, is a system that combines hardware and software to help users monitor their liquid consumption and estimate nutrient intake through precise, weight-based measurements. The system is composed of two main components:
 
 - **Smart Scale:** A Bluetooth-enabled ESP32 device with a weight sensor.
@@ -74,6 +72,10 @@ These components are physically independent but communicate seamlessly over Blue
 ### Insights
 
 - Tap the **lightbulb icon** to receive personalized insights and tips based on your recent drinking habits.
+
+## Demo
+
+![Demo](https://youtube.com/shorts/c0TtVSi5ysk)
 
 ## Acknowledgments
 
