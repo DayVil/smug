@@ -75,6 +75,10 @@ These components are physically independent but communicate seamlessly over Blue
 
 - Tap the **lightbulb icon** to receive personalized insights and tips based on your recent drinking habits.
 
+## Demo
+
+[![Watch the video](./docs/video_thumbnail.png)](https://www.youtube.com/watch?v=c0TtVSi5ysk)
+
 ## Acknowledgments
 
 - [Open Food Facts](https://world.openfoodfacts.org/) for product and nutrition data.
